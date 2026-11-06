@@ -1,0 +1,12 @@
+<!-- AI-GEN AI-007: project file made by Claude (basic structure, allowed in the final game). The physics code itself is Christopher's. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Matches the .NET version Godot 4 uses for C#. -->
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Physics</RootNamespace>
+  </PropertyGroup>
+
+</Project>
