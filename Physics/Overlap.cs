@@ -244,4 +244,13 @@ public static class Overlap
             return null;
         }
     }
+
+    /// <summary>
+    /// Returns whether or not a given circle and quadratic curve overlap
+    /// </summary>
+    public static bool CircleCurve(Circle circ, Curve curve)
+    {
+        Vec2 closestPointToCenter = curve.ClosestPoint(circ.Center);
+        return PointInCircle(closestPointToCenter, circ);
+    }
 }
