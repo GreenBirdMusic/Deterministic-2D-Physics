@@ -105,4 +105,13 @@ public static class Overlap
 
         return inside;
     }
+
+    /// <summary>
+    /// Returns whether or not a given circle overlaps a given arc
+    /// </summary>
+    public static bool CircleArc(Circle c, Arc a)
+    {
+        Vec2 closestPointToCenter = a.ClosestPoint(c.Center);
+        return PointInCircle(closestPointToCenter, c);
+    }
 }
