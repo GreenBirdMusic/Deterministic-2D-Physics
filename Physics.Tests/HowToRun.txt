@@ -1,0 +1,2 @@
+To run the physics tests, navigate to this folder in terminal and run `dotnet test`
+(Added because I have forgotten this several times -Christopher)

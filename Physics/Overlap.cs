@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Physics;
 
@@ -78,5 +79,30 @@ public static class Overlap
                 return null;
             }
         }
+    }
+
+    /// <summary>
+    /// Finds whether or not a point is in a segment loop
+    /// </summary>
+    public static bool PointInLoop(Vec2 p, IReadOnlyList<Segment> loop)
+    {
+        bool inside = false;
+
+        foreach (Segment segment in loop)
+        {
+            if ((segment.Start.Y > p.Y) != (segment.End.Y > p.Y))
+            {
+                // Verifies that the segment has a part above and below point p
+                double t = (p.Y - segment.Start.Y) / (segment.End.Y - segment.Start.Y); 
+                double x = segment.Start.X + t * (segment.End.X - segment.Start.X);
+                if (x > p.X)
+                {
+                    // The line overlaps a ray to the right from p
+                    inside = !inside;
+                }
+            }
+        }
+
+        return inside;
     }
 }
