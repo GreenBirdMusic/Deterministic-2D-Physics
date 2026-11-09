@@ -178,4 +178,70 @@ public static class Overlap
         // The line does not hit the circle containing the arc
         return null;
     }
+
+    /// <summary>
+    /// Returns how far along a given segment hits a given quadratic curve
+    /// </summary>
+    public static double? SegmentCurve(Segment s, Curve curve)
+    {
+        Vec2 r = s.End - s.Start;
+        double a = Vec2.Cross(curve.Bend, r);
+        if (Math.Abs(r.LengthSquared) <= Vec2.Epsilon * Vec2.Epsilon) {return null;}
+        double b = Vec2.Cross(curve.Control - curve.Start, r);
+        double c = Vec2.Cross(curve.Start - s.Start, r);
+        if (Math.Abs(a) > Vec2.Epsilon * curve.Bend.Length * r.Length)
+        {
+            // Not the special case where a is approximately 0
+            double disc = b * b - a * c;
+            if (disc >= 0)
+            {
+                // The line might hit the curve
+                double sqrtDisc = Math.Sqrt(disc);
+                double t1 = (-b - sqrtDisc) / a;
+                double t2 = (-b + sqrtDisc) / a;
+                double? best = null;
+                // Get u1 and u2 values
+                if (0 <= t1 && t1 <= 1)
+                {
+                    Vec2 hit = curve.PointAt(t1);
+                    double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;
+                    if (0 <= u && u <= 1)
+                    {
+                        if (best == null || u < best) {best = u;}
+                    }
+                }
+                if (0 <= t2 && t2 <= 1)
+                {
+                    Vec2 hit = curve.PointAt(t2);
+                    double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;
+                    if (0 <= u && u <= 1)
+                    {
+                        if (best == null || u < best) {best = u;}
+                    }
+                }
+
+                return best;
+            }
+            // Doesn't hit the curve
+            return null;
+        }
+        else
+        {
+            if (Math.Abs(b) <= Vec2.Epsilon * (curve.Control - curve.Start).Length * r.Length) {return null;}
+            // Special case: a is approximately 0
+            double t = -1 * c / (2 * b);
+            if (0 <= t && t <= 1)
+            {
+                Vec2 hit = curve.PointAt(t);
+                double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;
+                if (0 <= u && u <= 1)
+                {
+                    // There is a valid hit along the curve
+                    return u;
+                }
+            }
+            // The segment does not hit the curve
+            return null;
+        }
+    }
 }
