@@ -92,4 +92,30 @@ public readonly struct Vec2
             return Zero;
         }
     }
+
+    /// <summary>
+    /// Gets the dot product between two Vec2 vectors
+    /// </summary>
+    public static double Dot(Vec2 a, Vec2 b)
+    {
+        return a.X * b.X + a.Y * b.Y;
+    }
+
+    /// <summary>
+    /// Gets the cross product between two Vec2 vectors
+    /// Positive if b turns clockwise from a on screen (Y points down).
+    /// </summary>
+    public static double Cross(Vec2 a, Vec2 b)
+    {
+        return a.X * b.Y - a.Y * b.X;
+    }
+
+    /// <summary>
+    /// Gets the Vec2 vector perpendicular to this Vec2 vector
+    /// Turned 90 degrees clockwise on screen (Y points down).
+    /// </summary>
+    public Vec2 Perp()
+    {
+        return new Vec2(-Y, X);
+    }
 }
