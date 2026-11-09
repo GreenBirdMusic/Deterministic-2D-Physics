@@ -43,7 +43,7 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         }
         else
         {
-            if (Vec2.Dot(d, Direction) >= Math.Cos(HalfAngle) * d.Length)
+            if (IsWithinAngle(d))
             {
                 // The point is within the arc's angle
                 return Center + d.Normalized() * Radius;
@@ -55,11 +55,16 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
                 {
                     return StartPoint;
                 }
-                else
-                {
-                    return EndPoint;
-                }
+                return EndPoint;
             }
         }
+    }
+
+    /// <summary>
+    /// Returns whether d is in the arc's angle
+    /// </summary>
+    public bool IsWithinAngle(Vec2 d)
+    {
+        return Vec2.Dot(d, Direction) >= Math.Cos(HalfAngle) * d.Length;
     }
 }

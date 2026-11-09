@@ -57,10 +57,7 @@ public static class Overlap
                     if (t < 0) {t = 0;}
                     return t;
                 }
-                else
-                {
-                    return null;
-                }
+                return null;
             }
         }
         else
@@ -73,11 +70,8 @@ public static class Overlap
                 // Overlap, return first segment t-value
                 return t;
             }
-            else
-            {
-                // No overlap
-                return null;
-            }
+            // No overlap
+            return null;
         }
     }
 
@@ -113,5 +107,75 @@ public static class Overlap
     {
         Vec2 closestPointToCenter = a.ClosestPoint(c.Center);
         return PointInCircle(closestPointToCenter, c);
+    }
+
+    /// <summary>
+    /// Returns how far along a given segment overlaps with a given circle
+    /// </summary>
+    public static double? SegmentCircle(Segment s, Circle circ)
+    {
+        Vec2 r = s.End - s.Start;
+        Vec2 f = s.Start - circ.Center;
+        double a = r.LengthSquared;
+        if (Math.Abs(a) <= Vec2.Epsilon * Vec2.Epsilon) {return null;}
+        double b = Vec2.Dot(f, r);
+        double c = f.LengthSquared - circ.Radius * circ.Radius;
+        double disc = b * b - a * c;
+        if (disc >= 0)
+        {
+            // The line hits the circle
+            double sqrtDisc = Math.Sqrt(disc);
+            double t1 = (-b - sqrtDisc) / a;
+            double t2 = (-b + sqrtDisc) / a;
+            if (t1 >= 0 && t1 <= 1)
+            {
+                // Hits the circle at t1
+                return t1;
+            }
+            else if (t1 < 0 && 0 <= t2)
+            {
+                // Already inside the circle, return 0
+                return 0;
+            }
+            // Segment doesn't touch the circle
+            return null;
+        }
+        // The line does not hit the circle
+        return null;
+    }
+
+    /// <summary>
+    /// Returns how far along a given segment hits a given arc
+    /// </summary>
+    public static double? SegmentArc(Segment s, Arc arc)
+    {
+        Vec2 r = s.End - s.Start;
+        Vec2 f = s.Start - arc.Center;
+        double a = r.LengthSquared;
+        if (a <= Vec2.Epsilon * Vec2.Epsilon) {return null;}
+        double b = Vec2.Dot(f, r);
+        double c = f.LengthSquared - arc.Radius * arc.Radius;
+        double disc = b * b - a * c;
+        if (disc >= 0)
+        {
+            // The line might hit the arc
+            double sqrtDisc = Math.Sqrt(disc);
+            double t1 = (-b - sqrtDisc) / a;
+            double t2 = (-b + sqrtDisc) / a;
+            if (t1 >= 0 && t1 <= 1 && arc.IsWithinAngle(f + t1 * r))
+            {
+                // Hits the arc at t1
+                return t1;
+            }
+            else if (t2 >= 0 && t2 <= 1 && arc.IsWithinAngle(f + t2 * r))
+            {
+                // Hits the arc at t2
+                return t2;
+            }
+            // Doesn't touch the arc
+            return null;
+        }
+        // The line does not hit the circle containing the arc
+        return null;
     }
 }
