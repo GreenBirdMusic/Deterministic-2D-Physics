@@ -26,4 +26,57 @@ public static class Overlap
         Vec2 closestPointToCenter = s.ClosestPoint(c.Center);
         return PointInCircle(closestPointToCenter, c);
     }
+    /// <summary>
+    /// Returns whether or not two segments overlap, as well as where
+    /// </summary>
+    public static double? SegmentSegment(Segment P, Segment Q)
+    {
+        Vec2 r = P.End - P.Start;
+        Vec2 s = Q.End - Q.Start;
+        Vec2 qp = Q.Start - P.Start;
+        if (r.LengthSquared <= 1e-16) {return null;}
+        double crossRS = Vec2.Cross(r, s);
+        if (Math.Abs(crossRS) <= 1e-8 * r.Length * s.Length)
+        {
+            // Parallel line segments
+            if (Math.Abs(Vec2.Cross(qp, r)) > 1e-8 * r.Length)
+            {
+                // No overlap
+                return null;
+            }
+            else
+            {
+                // Find if they overlap
+                double t0 = Vec2.Dot(qp, r) / r.LengthSquared;
+                double t1 = Vec2.Dot(Q.End - P.Start, r) / r.LengthSquared;
+                if ((t0 < 0 && t1 >= 0) || (t0 > 1 && t1 <= 1) || (0 <= t0 && t0 <= 1))
+                {
+                    // They overlap
+                    double t = Math.Min(t0, t1);
+                    if (t < 0) {t = 0;}
+                    return t;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+        else
+        {
+            // Non-parallel line segments
+            double t = Vec2.Cross(qp, s) / crossRS;
+            double u = Vec2.Cross(qp, r) / crossRS;
+            if (0 <= t && t <= 1 && 0 <= u && u <= 1)
+            {
+                // Overlap, return first segment t-value
+                return t;
+            }
+            else
+            {
+                // No overlap
+                return null;
+            }
+        }
+    }
 }
