@@ -118,4 +118,12 @@ public readonly struct Vec2
     {
         return new Vec2(-Y, X);
     }
+
+    /// <summary>
+    /// Gets a position t of the way from a to b
+    /// </summary>
+    public static Vec2 Lerp(Vec2 a, Vec2 b, double t)
+    {
+        return a + (b - a) * t;
+    }
 }
