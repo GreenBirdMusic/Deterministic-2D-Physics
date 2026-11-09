@@ -77,13 +77,13 @@ public readonly struct Vec2
         return new Vec2(left.X / right, left.Y / right);
     }
 
-    const double minNormalizeSize = 1e-8;
+    public const double Epsilon = 1e-8;
     /// <summary>
     /// Normalizes a Vec2 vector
     /// </summary>
     public Vec2 Normalized()
     {
-        if (Math.Abs(X) > minNormalizeSize || Math.Abs(Y) > minNormalizeSize)
+        if (Math.Abs(X) > Epsilon || Math.Abs(Y) > Epsilon)
         {
             return this/Length;
         }

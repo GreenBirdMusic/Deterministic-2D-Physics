@@ -10,7 +10,7 @@ public readonly record struct Segment(Vec2 Start, Vec2 End)
     public Vec2 ClosestPoint(Vec2 p)
     {
         Vec2 dir = End - Start;
-        if (dir.LengthSquared <= 1e-16) {return Start;}
+        if (dir.LengthSquared <= Vec2.Epsilon * Vec2.Epsilon) {return Start;}
         double t = Vec2.Dot(p - Start, dir)/dir.LengthSquared;
         t = Math.Clamp(t, 0, 1);
         return Start + dir * t; // Didn't use Lerp because this is technically slightly faster

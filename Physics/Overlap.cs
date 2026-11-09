@@ -34,12 +34,12 @@ public static class Overlap
         Vec2 r = P.End - P.Start;
         Vec2 s = Q.End - Q.Start;
         Vec2 qp = Q.Start - P.Start;
-        if (r.LengthSquared <= 1e-16) {return null;}
+        if (r.LengthSquared <= Vec2.Epsilon * Vec2.Epsilon) {return null;}
         double crossRS = Vec2.Cross(r, s);
-        if (Math.Abs(crossRS) <= 1e-8 * r.Length * s.Length)
+        if (Math.Abs(crossRS) <= Vec2.Epsilon * r.Length * s.Length)
         {
             // Parallel line segments
-            if (Math.Abs(Vec2.Cross(qp, r)) > 1e-8 * r.Length)
+            if (Math.Abs(Vec2.Cross(qp, r)) > Vec2.Epsilon * r.Length)
             {
                 // No overlap
                 return null;
