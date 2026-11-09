@@ -4,7 +4,7 @@ namespace Physics;
 
 public class TickClock
 {
-    // Static global settings
+    // Clock settings
     /// <summary>
     /// the number of ticks per second
     /// </summary>
@@ -13,13 +13,9 @@ public class TickClock
     /// To prevent the game from getting stuck forever on a single frame 
     /// </summary>
     private int MaxTicksPerFrame {get;}
-    /// <summary>
-    /// The max time (in seconds) that the accumulator can gain per frame
-    /// </summary>
-    private double MaxDelta {get;}
 
     /// <summary>
-    /// Progress to the next frame
+    /// Progress to the next tick
     /// </summary>
     public double Alpha => AccumulatedTime * TicksPerSecond;
 
@@ -28,24 +24,28 @@ public class TickClock
     /// The amount of time accumulated since the last tick
     /// </summary>
     private double AccumulatedTime = 0;
+
+    private double timeRate = 1;
     /// <summary>
     /// The current rate of time in the game. Used primarily for slowdown effects
     /// </summary>
-    public double TimeRate = 1;
+    public double TimeRate
+    {
+        get => timeRate;
+        set => timeRate = Math.Max(0, value);
+    }
     /// <summary>
     /// Whether or not the game is currently paused
     /// </summary>
     public bool Paused = false;
-    
 
     /// <summary>
     /// Constructs a new TickClock object
     /// </summary>
-    public TickClock(double ticksPerSecond = 60, int maxTicksPerFrame = 5, double maxDelta = 0.25)
+    public TickClock(double ticksPerSecond = 60, int maxTicksPerFrame = 5)
     {
         TicksPerSecond = ticksPerSecond;
         MaxTicksPerFrame = maxTicksPerFrame;
-        MaxDelta = maxDelta;
     }
 
     /// <summary>
@@ -54,7 +54,6 @@ public class TickClock
     public int AdvanceClock(double delta)
     {
         if (Paused) {return 0;} // Nothing happens while paused
-        if (delta > MaxDelta) {delta = MaxDelta;}
         AccumulatedTime += delta * TimeRate;
         int ticksToRun = (int)(AccumulatedTime * TicksPerSecond);
         AccumulatedTime -= ticksToRun/TicksPerSecond;

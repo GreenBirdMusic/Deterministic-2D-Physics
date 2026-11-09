@@ -55,6 +55,22 @@ public class TickClockTests
     }
 
     [Fact]
+    public void NegativeTimeRateBecomesZero()
+    {
+        var clock = new TickClock(ticksPerSecond: 60) { TimeRate = -2 };
+        Assert.Equal(0, clock.TimeRate);
+        Assert.Equal(0, RunFrames(clock, 60, 1.0 / 60));
+    }
+
+    [Fact]
+    public void LaptopWakingFromSleepRunsOnlyTheCap()
+    {
+        var clock = new TickClock(ticksPerSecond: 60, maxTicksPerFrame: 5);
+        Assert.Equal(5, clock.AdvanceClock(3600));                // an hour asleep
+        Assert.Equal(1, clock.AdvanceClock(1.0 / 60));            // no catching up afterwards
+    }
+
+    [Fact]
     public void ZeroTimeRateGivesNoTicks()
     {
         var clock = new TickClock(ticksPerSecond: 60) { TimeRate = 0 };
@@ -75,11 +91,11 @@ public class TickClockTests
     }
 
     [Fact]
-    public void HugeDeltaIsClampedAndCappedAndTheRestIsDropped()
+    public void HugeDeltaIsCappedAndTheRestIsDropped()
     {
-        var clock = new TickClock(ticksPerSecond: 60, maxTicksPerFrame: 5, maxDelta: 0.25);
-        Assert.Equal(5, clock.AdvanceClock(10));                  // 10 s -> 0.25 s -> 15 ticks owed -> 5 run
-        Assert.Equal(1, clock.AdvanceClock(1.0 / 60));            // the other 10 were dropped, not saved up
+        var clock = new TickClock(ticksPerSecond: 60, maxTicksPerFrame: 5);
+        Assert.Equal(5, clock.AdvanceClock(10));                  // 10 s -> 600 ticks owed -> 5 run
+        Assert.Equal(1, clock.AdvanceClock(1.0 / 60));            // the other 595 were dropped, not saved up
     }
 
     [Fact]
