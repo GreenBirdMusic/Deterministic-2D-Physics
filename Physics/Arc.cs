@@ -14,9 +14,9 @@ namespace Physics;
 /// negative prevents movement from inside to outside.
 /// BothSolid overrides this behavior and prevents movement from both directions.
 /// </param>
-public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, double HalfAngle, bool BothSolid = false)
+public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, double HalfAngle, bool BothSolid = false) : IEdge
 {
-    public Vec2 StartPoint
+    public Vec2 Start
     {
         get
         {
@@ -29,7 +29,7 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         }
     }
 
-    public Vec2 EndPoint
+    public Vec2 End
     {
         get
         {
@@ -63,11 +63,11 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
             else
             {
                 // The point is outside of the arc's angle
-                if ((p - StartPoint).LengthSquared < (p - EndPoint).LengthSquared)
+                if ((p - Start).LengthSquared < (p - End).LengthSquared)
                 {
-                    return StartPoint;
+                    return Start;
                 }
-                return EndPoint;
+                return End;
             }
         }
     }
@@ -101,5 +101,19 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
             return (p - Center).LengthSquared < Radius * Radius;
         }
         return (p - Center).LengthSquared > Radius * Radius;
+    }
+
+    /// <summary>
+    /// Used for point in loop detection.
+    /// Returns whether a point is in the bounds of the shape enclosed by the arc and a line from Start to End
+    /// </summary>
+    public bool IsInCap(Vec2 p)
+    {
+        Vec2 d = p - Center;
+        if (d.LengthSquared < Radius * Radius)
+        {
+            return Vec2.Dot(d, Direction) > Radius * Math.Cos(HalfAngle);
+        }
+        return false;
     }
 }

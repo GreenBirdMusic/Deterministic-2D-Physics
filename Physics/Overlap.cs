@@ -76,19 +76,20 @@ public static class Overlap
     }
 
     /// <summary>
-    /// Finds whether or not a point is in a segment loop
+    /// Finds whether or not a point is in a collider loop
     /// </summary>
-    public static bool PointInLoop(Vec2 p, IReadOnlyList<Segment> loop)
+    public static bool PointInLoop(Vec2 p, IReadOnlyList<IEdge> loop)
     {
         bool inside = false;
 
-        foreach (Segment segment in loop)
+        foreach (IEdge edge in loop)
         {
-            if ((segment.Start.Y > p.Y) != (segment.End.Y > p.Y))
+            if (edge.IsInCap(p)) {inside = !inside;}
+            if ((edge.Start.Y > p.Y) != (edge.End.Y > p.Y))
             {
-                // Verifies that the segment has a part above and below point p
-                double t = (p.Y - segment.Start.Y) / (segment.End.Y - segment.Start.Y); 
-                double x = segment.Start.X + t * (segment.End.X - segment.Start.X);
+                // Verifies that the edge has a part above and below point p
+                double t = (p.Y - edge.Start.Y) / (edge.End.Y - edge.Start.Y); 
+                double x = edge.Start.X + t * (edge.End.X - edge.Start.X);
                 if (x > p.X)
                 {
                     // The line overlaps a ray to the right from p

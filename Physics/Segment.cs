@@ -2,7 +2,7 @@ using System;
 
 namespace Physics;
 
-public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = false)
+public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = false) : IEdge
 {
     /// <summary>
     /// Gets the closest point along the segment to a given Vec2 point
@@ -28,5 +28,13 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     {
         if (BothSolid) {return true;}
         return Vec2.Cross(End - Start, p - Start) > 0;
+    }
+
+    /// <summary>
+    /// Used for point in loop detection. Returns false for a segment
+    /// </summary>
+    public bool IsInCap(Vec2 p)
+    {
+        return false;
     }
 }

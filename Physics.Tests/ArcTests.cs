@@ -21,16 +21,16 @@ public class ArcTests
     public void EndPointsAtTheOrigin()
     {
         // Start is "down" rotated by -90 degrees (anticlockwise on screen): "right". End is +90: "left".
-        AssertNear(new Vec2(2, 0), BottomHalf.StartPoint);
-        AssertNear(new Vec2(-2, 0), BottomHalf.EndPoint);
+        AssertNear(new Vec2(2, 0), BottomHalf.Start);
+        AssertNear(new Vec2(-2, 0), BottomHalf.End);
     }
 
     [Fact]
     public void EndPointsAwayFromTheOriginWithOtherRadius()
     {
         double h = Math.Sqrt(0.5);
-        AssertNear(new Vec2(5 + h, 5 - h), Quarter.StartPoint);
-        AssertNear(new Vec2(5 + h, 5 + h), Quarter.EndPoint);
+        AssertNear(new Vec2(5 + h, 5 - h), Quarter.Start);
+        AssertNear(new Vec2(5 + h, 5 + h), Quarter.End);
     }
 
     [Fact]

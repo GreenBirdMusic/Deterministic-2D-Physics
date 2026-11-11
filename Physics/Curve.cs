@@ -2,7 +2,7 @@ using System;
 
 namespace Physics;
 
-public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool BothSolid = false)
+public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool BothSolid = false) : IEdge
 {
     public Vec2 Bend => Start - 2 * Control + End;
 
@@ -101,5 +101,23 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         if (BothSolid) {return true;}
         double t = ClosestT(p);
         return Vec2.Cross(TangentAt(t), p - PointAt(t)) > 0;
+    }
+
+    /// <summary>
+    /// Used for point in loop detection.
+    /// Returns whether a point is in the bounds of the shape enclosed by the curve and a line from Start to End
+    /// </summary>
+    public bool IsInCap(Vec2 p)
+    {
+        Vec2 A = 2 * (Control - Start);
+        double crossAB = Vec2.Cross(A, Bend);
+        if (Math.Abs(crossAB) > Vec2.Epsilon * (End - Start).LengthSquared)
+        {
+            Vec2 q = p - Start;
+            double u = Vec2.Cross(q, Bend) / crossAB;
+            double v = Vec2.Cross(A, q) / crossAB;
+            return u * u < v && v < u;
+        }
+        return false;
     }
 }

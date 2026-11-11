@@ -101,10 +101,10 @@ public class SolidSideTests
     [Fact]
     public void ArcFollowsTheSameRuleAsSegments()
     {
-        // The chord from StartPoint to EndPoint faces the same way as the arc's middle,
+        // The chord from Start to End faces the same way as the arc's middle,
         // so arcs and segments chained End to Start face consistently.
-        AssertNear(Bump.NormalAt(new Vec2(0, -2)), new Segment(Bump.StartPoint, Bump.EndPoint).Normal);
-        AssertNear(Bowl.NormalAt(new Vec2(0, -2)), new Segment(Bowl.StartPoint, Bowl.EndPoint).Normal);
+        AssertNear(Bump.NormalAt(new Vec2(0, -2)), new Segment(Bump.Start, Bump.End).Normal);
+        AssertNear(Bowl.NormalAt(new Vec2(0, -2)), new Segment(Bowl.Start, Bowl.End).Normal);
     }
 
     // ---------- Curve ----------
