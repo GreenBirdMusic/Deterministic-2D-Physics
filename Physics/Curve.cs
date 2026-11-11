@@ -2,7 +2,7 @@ using System;
 
 namespace Physics;
 
-public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End)
+public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool BothSolid = false)
 {
     public Vec2 Bend => Start - 2 * Control + End;
 
@@ -18,6 +18,14 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End)
     /// Gets the closest point along the quadratic curve to a given Vec2 point
     /// </summary>
     public Vec2 ClosestPoint(Vec2 p)
+    {
+        return PointAt(ClosestT(p));
+    }
+
+    /// <summary>
+    /// Gets the t value for the closest point along the quadratic curve to a given Vec2 point
+    /// </summary>
+    public double ClosestT(Vec2 p)
     {
         if (Bend.LengthSquared > Vec2.Epsilon * Vec2.Epsilon * (End - Start).LengthSquared)
         {
@@ -52,11 +60,46 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End)
                     }
                 }
             }
-            return PointAt(best);
+            return best;
         }
         else
         {
-            return new Segment(Start, End).ClosestPoint(p);
+            Vec2 dir = End - Start;
+            if (dir.LengthSquared <= Vec2.Epsilon * Vec2.Epsilon) {return 0;}
+            double t = Vec2.Dot(p - Start, dir)/dir.LengthSquared;
+            t = Math.Clamp(t, 0, 1);
+            return t;
         }
+    }
+
+    /// <summary>
+    /// The direction that the curve is moving at t
+    /// </summary>
+    public Vec2 TangentAt(double t)
+    {
+        Vec2 derivative = 2 * (1 - t) * (Control - Start) + 2 * t * (End - Control);
+        if (derivative.LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
+        {
+            return derivative;
+        }
+        return End - Start;
+    }
+
+    /// <summary>
+    /// Returns the normal of the curve at t from 0 (start) to 1 (end)
+    /// </summary>
+    public Vec2 NormalAt(double t)
+    {
+        return (-TangentAt(t).Perp()).Normalized();
+    }
+
+    /// <summary>
+    /// Returns whether or not the given Vec2 p is towards the solid side of the curve
+    /// </summary>
+    public bool IsOnSolidSide(Vec2 p)
+    {
+        if (BothSolid) {return true;}
+        double t = ClosestT(p);
+        return Vec2.Cross(TangentAt(t), p - PointAt(t)) > 0;
     }
 }

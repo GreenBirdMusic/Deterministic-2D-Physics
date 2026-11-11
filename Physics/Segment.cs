@@ -2,7 +2,7 @@ using System;
 
 namespace Physics;
 
-public readonly record struct Segment(Vec2 Start, Vec2 End)
+public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = false)
 {
     /// <summary>
     /// Gets the closest point along the segment to a given Vec2 point
@@ -14,5 +14,19 @@ public readonly record struct Segment(Vec2 Start, Vec2 End)
         double t = Vec2.Dot(p - Start, dir)/dir.LengthSquared;
         t = Math.Clamp(t, 0, 1);
         return Start + dir * t; // Didn't use Lerp because this is technically slightly faster
+    }
+
+    /// <summary>
+    /// The normal of the segment. Points to your left if you stand at Start and face End.
+    /// </summary>
+    public Vec2 Normal => (-(End - Start).Perp()).Normalized();
+
+    /// <summary>
+    /// Returns whether or not the given Vec2 p is towards the solid side of the line the segment lies on.
+    /// </summary>
+    public bool IsOnSolidSide(Vec2 p)
+    {
+        if (BothSolid) {return true;}
+        return Vec2.Cross(End - Start, p - Start) > 0;
     }
 }

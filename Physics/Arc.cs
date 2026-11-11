@@ -2,14 +2,26 @@ using System;
 
 namespace Physics;
 
-public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, double HalfAngle)
+/// <summary>
+/// A segment of a circle, determined by Center and Radius to define the circle,
+/// and Direction with HalfAngle to determine the segment.
+/// Half angle determines how collision works (read Half Angle parameter for explanation).
+/// </summary>
+/// <param name="Direction">Unit vector from the center to the middle of the arc.</param>
+/// <param name="HalfAngle">Angle (in radians, -pi to pi) from the middle of the arc to each end.
+/// Sign determines interaction:
+/// positive prevents movement from outside to inside.
+/// negative prevents movement from inside to outside.
+/// BothSolid overrides this behavior and prevents movement from both directions.
+/// </param>
+public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, double HalfAngle, bool BothSolid = false)
 {
     public Vec2 StartPoint
     {
         get
         {
             double cos = Math.Cos(HalfAngle);
-            double sin = Math.Sin(HalfAngle);
+            double sin = -Math.Sin(HalfAngle);
             return Center + new Vec2(
                 Direction.X * cos - Direction.Y * sin,
                 Direction.X * sin + Direction.Y * cos
@@ -22,7 +34,7 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         get
         {
             double cos = Math.Cos(HalfAngle);
-            double sin = -Math.Sin(HalfAngle);
+            double sin = Math.Sin(HalfAngle);
             return Center + new Vec2(
                 Direction.X * cos - Direction.Y * sin,
                 Direction.X * sin + Direction.Y * cos
@@ -66,5 +78,28 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
     public bool IsWithinAngle(Vec2 d)
     {
         return Vec2.Dot(d, Direction) >= Math.Cos(HalfAngle) * d.Length;
+    }
+
+    /// <summary>
+    /// Returns the normal given a point p (which must be on the arc for this to make sense)
+    /// </summary>
+    public Vec2 NormalAt(Vec2 p)
+    {
+        Vec2 r = (p - Center).Normalized();
+        if (HalfAngle > 0) {return r;}
+        return -r;
+    }
+
+    /// <summary>
+    /// Returns whether or not the given Vec2 p is towards the solid side of the circle containing this arc
+    /// </summary>
+    public bool IsOnSolidSide(Vec2 p)
+    {
+        if (BothSolid) {return true;}
+        if (HalfAngle > 0)
+        {
+            return (p - Center).LengthSquared < Radius * Radius;
+        }
+        return (p - Center).LengthSquared > Radius * Radius;
     }
 }
