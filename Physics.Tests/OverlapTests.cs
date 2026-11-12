@@ -63,7 +63,7 @@ public class OverlapTests
         Assert.True(Overlap.PointInCircle(new Vec2(0, 0), Unit));
         Assert.True(Overlap.PointInCircle(new Vec2(0.6, 0.7), Unit));
         Assert.False(Overlap.PointInCircle(new Vec2(0.8, 0.7), Unit));
-        Assert.False(Overlap.PointInCircle(new Vec2(1, 0), Unit));       // exactly on the edge: touching, not inside
+        Assert.True(Overlap.PointInCircle(new Vec2(1, 0), Unit));        // exactly on the edge: touching counts
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class OverlapTests
         var inside = new Circle(new Vec2(0.1, 0), 0.2);                 // fully inside the other
         Assert.True(Overlap.CircleCircle(Unit, near));
         Assert.True(Overlap.CircleCircle(near, Unit));                    // order doesn't matter
-        Assert.False(Overlap.CircleCircle(Unit, touching));
+        Assert.True(Overlap.CircleCircle(Unit, touching));                // touching counts
         Assert.False(Overlap.CircleCircle(Unit, far));
         Assert.True(Overlap.CircleCircle(Unit, inside));
     }
@@ -86,7 +86,7 @@ public class OverlapTests
         var floor = new Segment(new Vec2(-10, 2), new Vec2(10, 2));
         Assert.False(Overlap.CircleSegment(Unit, floor));                                   // 2 away, radius 1
         Assert.True(Overlap.CircleSegment(new Circle(new Vec2(3, 1.5), 1), floor));         // 0.5 away
-        Assert.False(Overlap.CircleSegment(new Circle(new Vec2(3, 1), 1), floor));          // exactly touching
+        Assert.True(Overlap.CircleSegment(new Circle(new Vec2(3, 1), 1), floor));           // exactly touching counts
 
         // Near an end: the closest point is the end itself, not the line beyond it.
         var shortSeg = new Segment(new Vec2(0, 0), new Vec2(5, 0));

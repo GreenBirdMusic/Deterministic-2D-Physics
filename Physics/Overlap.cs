@@ -10,14 +10,14 @@ public static class Overlap
     /// </summary>
     public static bool PointInCircle(Vec2 p, Circle c)
     {
-        return (p - c.Center).LengthSquared < c.Radius * c.Radius;
+        return (p - c.Center).LengthSquared <= c.Radius * c.Radius;
     }
     /// <summary>
     /// Returns whether or not two given circles overlap
     /// </summary>
     public static bool CircleCircle(Circle a, Circle b)
     {
-        return (b.Center - a.Center).LengthSquared < (a.Radius + b.Radius) * (a.Radius + b.Radius);
+        return (b.Center - a.Center).LengthSquared <= (a.Radius + b.Radius) * (a.Radius + b.Radius);
     }
     /// <summary>
     /// Returns whether or not a given circle and a given line segment overlap
@@ -28,7 +28,7 @@ public static class Overlap
         return PointInCircle(closestPointToCenter, c);
     }
     /// <summary>
-    /// Returns whether or not two segments overlap, as well as where
+    /// Returns whether or not two segments touch, as well as where
     /// </summary>
     public static double? SegmentSegment(Segment P, Segment Q)
     {
@@ -253,5 +253,113 @@ public static class Overlap
     {
         Vec2 closestPointToCenter = curve.ClosestPoint(circ.Center);
         return PointInCircle(closestPointToCenter, circ);
+    }
+
+    /// <summary>
+    /// Returns whether or not two given arcs overlap
+    /// </summary>
+    public static bool ArcArc(Arc arc1, Arc arc2)
+    {
+        Vec2 d = arc2.Center - arc1.Center;
+        double D = d.Length;
+        // Confirm that the circles touch
+        if (D <= Vec2.Epsilon * (arc1.Radius + arc2.Radius))
+        {
+            if (
+                Math.Abs(arc1.Radius - arc2.Radius) > 
+                Vec2.Epsilon * (arc1.Radius + arc2.Radius)
+            ) {return false;}
+            // Both circles overlap, check end points of arcs
+            if (
+                arc1.IsWithinAngle(arc2.Start - arc1.Center) ||
+                arc1.IsWithinAngle(arc2.End - arc1.Center) ||
+                arc2.IsWithinAngle(arc1.Start - arc2.Center) ||
+                arc2.IsWithinAngle(arc1.End - arc2.Center)
+            ) {return true;}
+            return false;
+        }
+        if (D > arc1.Radius + arc2.Radius) {return false;}
+        if (D < Math.Abs(arc1.Radius - arc2.Radius)) {return false;}
+        double a = (arc1.Radius * arc1.Radius - arc2.Radius * arc2.Radius + D * D) / (2 * D);
+        double h = Math.Sqrt(Math.Max(0, arc1.Radius * arc1.Radius - a * a));
+        Vec2 M = arc1.Center + d * (a / D);
+        Vec2 subPoint = (d / D).Perp() * h;
+        Vec2 P1 = M + subPoint;
+        Vec2 P2 = M - subPoint;
+        // Check the two overlap points of the circles
+        if (
+            (arc1.IsWithinAngle(P1 - arc1.Center) && arc2.IsWithinAngle(P1 - arc2.Center)) ||
+            (arc1.IsWithinAngle(P2 - arc1.Center) && arc2.IsWithinAngle(P2 - arc2.Center))
+        ) {return true;}
+        return false;
+    }
+
+    /// <summary>
+    /// Not implemented yet. Returns whether or not a given arc and a given curve overlap
+    /// </summary>
+    public static bool ArcCurve(Arc arc, Curve curve) => throw new NotImplementedException();
+    /// <summary>
+    /// Not implemented yet. Returns whether or not two given curves overlap
+    /// </summary>
+    public static bool CurveCurve(Curve curve1, Curve curve2) => throw new NotImplementedException();
+
+
+    /// <summary>
+    /// Returns whether or not any two given non-circle edges overlap
+    /// </summary>
+    static bool EdgesOverlap(IEdge a, IEdge b) => (a, b) switch
+    {
+        (Segment s, Segment t) => SegmentSegment(s, t) != null,
+        (Segment s, Arc r) => SegmentArc(s, r) != null,
+        (Segment s, Curve c) => SegmentCurve(s, c) != null,
+        (Arc r, Segment s) => SegmentArc(s, r) != null,
+        (Arc r, Arc ar) => ArcArc(r, ar),
+        (Arc r, Curve c) => ArcCurve(r, c),
+        (Curve c, Segment s) => SegmentCurve(s, c) != null,
+        (Curve c, Arc r) => ArcCurve(r, c),
+        (Curve c, Curve cv) => CurveCurve(c, cv),
+        _ => throw new NotImplementedException()
+    };
+
+    /// <summary>
+    /// Returns whether a given circle collides with a non-circle given edge
+    /// </summary>
+    static bool CircleEdge(Circle c, IEdge a) => a switch
+    {
+        Segment s => CircleSegment(c, s),
+        Arc r => CircleArc(c, r),
+        Curve cr => CircleCurve(c, cr),
+        _ => throw new NotImplementedException()
+    };
+
+    /// <summary>
+    /// Finds whether or not a given circle overlaps a given collider loop
+    /// </summary>
+    public static bool CircleLoop(Circle c, IReadOnlyList<IEdge> loop)
+    {
+        if (PointInLoop(c.Center, loop)) {return true;}
+        foreach (IEdge edge in loop)
+        {
+            if (CircleEdge(c, edge)) {return true;}
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Finds whether or not two shapes defined by given loops overlap
+    /// </summary>
+    public static bool LoopLoop(IReadOnlyList<IEdge> loop1, IReadOnlyList<IEdge> loop2)
+    {
+        if (loop1.Count == 0 || loop2.Count == 0) {return false;} // One loop empty, no overlap
+        // Check for one loop being entirely within another
+        if (PointInLoop(loop1[0].Start, loop2) || PointInLoop(loop2[0].Start, loop1)) {return true;}
+        foreach (IEdge edge1 in loop1)
+        {
+            foreach (IEdge edge2 in loop2)
+            {
+                if (EdgesOverlap(edge1, edge2)) {return true;}
+            }
+        }
+        return false;
     }
 }

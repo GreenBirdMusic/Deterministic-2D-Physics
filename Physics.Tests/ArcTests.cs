@@ -77,7 +77,7 @@ public class ArcTests
         Assert.True(Overlap.CircleArc(new Circle(new Vec2(0, 1.5), 1), BottomHalf));    // crosses the bottom
         Assert.True(Overlap.CircleArc(new Circle(new Vec2(2.5, -0.3), 1), BottomHalf)); // near the right end
         Assert.False(Overlap.CircleArc(new Circle(new Vec2(0, -1.5), 1), BottomHalf));  // above: the missing half doesn't collide
-        Assert.False(Overlap.CircleArc(new Circle(new Vec2(0, 3), 1), BottomHalf));     // exactly touching
+        Assert.True(Overlap.CircleArc(new Circle(new Vec2(0, 3), 1), BottomHalf));      // exactly touching counts
         Assert.True(Overlap.CircleArc(new Circle(new Vec2(5.9, 5.9), 0.5), Quarter)); // near the quarter's start point
     }
 }
