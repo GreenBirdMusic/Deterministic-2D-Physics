@@ -185,6 +185,9 @@ public static class Overlap
     /// </summary>
     public static double? SegmentCurve(Segment s, Curve curve)
     {
+        // Note: If a major change to this function is ever made, create
+        // a helper to find all hit points t and implement it in both
+        // Collision.PointCurve and Overlap.SegmentCurve
         Vec2 r = s.End - s.Start;
         double a = Vec2.Cross(curve.Bend, r);
         if (Math.Abs(r.LengthSquared) <= Vec2.Epsilon * Vec2.Epsilon) {return null;}
