@@ -211,4 +211,15 @@ public static class Collision
         }
         return firstHit;
     }
+
+    public static Hit? CircleCircle(Circle a, Circle b, Vec2 v)
+    {
+        Circle collider = new Circle(b.Center, b.Radius + a.Radius);
+        Hit? hit = PointCircle(a.Center, collider, v);
+        if (hit != null)
+        {
+            return new Hit(hit.Value.T, hit.Value.Point - a.Radius * hit.Value.Normal, hit.Value.Normal);
+        }
+        return null;
+    }
 }
