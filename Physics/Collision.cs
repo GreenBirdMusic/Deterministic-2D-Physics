@@ -5,6 +5,9 @@ namespace Physics;
 
 public static class Collision
 {
+    // Used primarily to handle the tolerance for circle collision
+    public const double circleTolerance = 1e-6;
+
     public static Hit? PointSegment(Vec2 p, Segment s, Vec2 v)
     {
         Vec2 n = s.Normal;
@@ -221,5 +224,53 @@ public static class Collision
             return new Hit(hit.Value.T, hit.Value.Point - a.Radius * hit.Value.Normal, hit.Value.Normal);
         }
         return null;
+    }
+
+    public static Hit? CircleSegment(Circle c, Segment s, Vec2 v)
+    {
+        Vec2 q = s.ClosestPoint(c.Center);
+        double d = (c.Center - q).Length;
+        if (d < c.Radius - circleTolerance) {return null;}
+        if (d <= c.Radius)
+        {
+            Vec2 n = (c.Center - q) / d;
+            if (s.BothSolid == true || Vec2.Dot(n, s.Normal) >= 0)
+            {
+                if (Vec2.Dot(v, n) < 0)
+                {
+                    return new Hit(0, c.Center - c.Radius * n, n);
+                }
+            }
+            return null;
+        }
+        Hit? best = PointSegment(c.Center, new Segment(s.Start + c.Radius * s.Normal, s.End + c.Radius * s.Normal), v);
+        
+        void Consider(Hit? h)
+        {
+            if (h != null && (s.BothSolid || Vec2.Dot(h.Value.Normal, s.Normal) >= 0))
+        {
+            if (best == null || h.Value.T < best.Value.T)
+            {
+                best = h;
+            }
+        }
+        }
+
+        if (s.BothSolid)
+        {
+            Hit? hitc = PointSegment(c.Center, new Segment(s.End - c.Radius * s.Normal, s.Start - c.Radius * s.Normal), v);
+            // hitc because hit is used itself later
+            Consider(hitc);
+        }
+        Hit? hit = PointCircle(c.Center, new Circle(s.Start, c.Radius), v);
+        Consider(hit);
+        hit = PointCircle(c.Center, new Circle(s.End, c.Radius), v);
+        Consider(hit);
+        if (best != null)
+        {
+            // Correct best
+            best = new Hit(best.Value.T, best.Value.Point - c.Radius * best.Value.Normal, best.Value.Normal);
+        }
+        return best;
     }
 }
