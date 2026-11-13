@@ -65,7 +65,7 @@ public static class Overlap
             // Non-parallel line segments
             double t = Vec2.Cross(qp, s) / crossRS;
             double u = Vec2.Cross(qp, r) / crossRS;
-            if (0 <= t && t <= 1 && 0 <= u && u <= 1)
+            if (0 <= t && t <= 1 && -Vec2.Epsilon <= u && u <= 1 + Vec2.Epsilon)
             {
                 // Overlap, return first segment t-value
                 return t;
@@ -205,7 +205,7 @@ public static class Overlap
                 double t2 = (-b + sqrtDisc) / a;
                 double? best = null;
                 // Get u1 and u2 values
-                if (0 <= t1 && t1 <= 1)
+                if (-Vec2.Epsilon <= t1 && t1 <= 1 + Vec2.Epsilon)
                 {
                     Vec2 hit = curve.PointAt(t1);
                     double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;
@@ -214,7 +214,7 @@ public static class Overlap
                         if (best == null || u < best) {best = u;}
                     }
                 }
-                if (0 <= t2 && t2 <= 1)
+                if (-Vec2.Epsilon <= t2 && t2 <= 1 + Vec2.Epsilon)
                 {
                     Vec2 hit = curve.PointAt(t2);
                     double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;
@@ -234,7 +234,7 @@ public static class Overlap
             if (Math.Abs(b) <= Vec2.Epsilon * (curve.Control - curve.Start).Length * r.Length) {return null;}
             // Special case: a is approximately 0
             double t = -1 * c / (2 * b);
-            if (0 <= t && t <= 1)
+            if (-Vec2.Epsilon <= t && t <= 1 + Vec2.Epsilon)
             {
                 Vec2 hit = curve.PointAt(t);
                 double u = Vec2.Dot(hit - s.Start, r) / r.LengthSquared;

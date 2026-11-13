@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Physics;
 
@@ -116,7 +117,7 @@ public static class Collision
                     nDot = -nDot;
                     n = -n;
                 }
-                if (0 <= t1 && t1 <= 1 && nDot < 0)
+                if (-Vec2.Epsilon <= t1 && t1 <= 1 + Vec2.Epsilon && nDot < 0)
                 {
                     Vec2 hit = curve.PointAt(t1);
                     double u = Vec2.Dot(hit - p, v) / v.LengthSquared;
@@ -136,7 +137,7 @@ public static class Collision
                     nDot = -nDot;
                     n = -n;
                 }
-                if (0 <= t2 && t2 <= 1 && nDot < 0)
+                if (-Vec2.Epsilon <= t2 && t2 <= 1 + Vec2.Epsilon && nDot < 0)
                 {
                     Vec2 hit = curve.PointAt(t2);
                     double u = Vec2.Dot(hit - p, v) / v.LengthSquared;
@@ -170,7 +171,7 @@ public static class Collision
                 nDot = -nDot;
                 n = -n;
             }
-            if (0 <= t && t <= 1 && nDot < 0)
+            if (-Vec2.Epsilon <= t && t <= 1 + Vec2.Epsilon && nDot < 0)
             {
                 Vec2 hit = curve.PointAt(t);
                 double u = Vec2.Dot(hit - p, v) / v.LengthSquared;
@@ -183,5 +184,31 @@ public static class Collision
             // The segment does not hit the curve
             return null;
         }
+    }
+
+    static Hit? PointEdge(Vec2 p, IEdge a, Vec2 v) => a switch
+    {
+        Segment s => PointSegment(p, s, v),
+        Arc r => PointArc(p, r, v),
+        Curve cr => PointCurve(p, cr, v),
+        _ => throw new NotImplementedException()
+    };
+
+    public static Hit? PointLoop(Vec2 p, IReadOnlyList<IEdge> loop, Vec2 v)
+    {
+        Hit? firstHit = null;
+        foreach (IEdge edge in loop)
+        {
+            Hit? hit = PointEdge(p, edge, v);
+            if (hit != null && firstHit != null && Math.Abs(hit.Value.T - firstHit.Value.T) <= Vec2.Epsilon)
+            {
+                firstHit = new Hit(hit.Value.T, hit.Value.Point, (hit.Value.Normal + firstHit.Value.Normal).Normalized());
+            }
+            else if (hit != null && (firstHit == null || hit.Value.T < firstHit.Value.T))
+            {
+                firstHit = hit;
+            }
+        }
+        return firstHit;
     }
 }
