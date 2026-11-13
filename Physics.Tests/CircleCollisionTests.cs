@@ -1,4 +1,4 @@
-// AI-GEN AI-013: tests for Christopher's moving circle checks (Collision.CircleCircle, CircleSegment, CircleArc), written by Claude. Dev-only, never part of the game.
+// AI-GEN AI-013: tests for Christopher's moving circle checks (Collision.CircleCircle, CircleSegment, CircleArc, CircleLoop), written by Claude. Dev-only, never part of the game.
 using Physics;
 
 namespace PhysicsTests;
@@ -426,5 +426,137 @@ public class CircleCollisionTests
             }
         }
         Assert.True(hits > 300, $"only {hits} hits");
+    }
+    // ---- CircleLoop ----
+    // Loops are drawn clockwise on screen (solid inside). Mover radius 1 unless noted.
+
+    static Segment S(double ax, double ay, double bx, double by) => new(new Vec2(ax, ay), new Vec2(bx, by));
+
+    static IEdge[] Box(double x0, double y0, double x1, double y1) =>
+        [S(x0, y0, x1, y0), S(x1, y0, x1, y1), S(x1, y1, x0, y1), S(x0, y1, x0, y0)];
+
+    static IEdge[] Polygon(params double[] xy)
+    {
+        var edges = new IEdge[xy.Length / 2];
+        for (int i = 0; i < edges.Length; i++)
+        {
+            int j = (i + 1) % edges.Length;
+            edges[i] = S(xy[2 * i], xy[2 * i + 1], xy[2 * j], xy[2 * j + 1]);
+        }
+        return edges;
+    }
+
+    static readonly IEdge[] Box10 = Box(0, 0, 10, 10);
+    static readonly double R2 = Math.Sqrt(0.5);
+
+    [Fact]
+    public void Loop_Empty_NoHit() =>
+        Assert.Null(Collision.CircleLoop(C(0, 0, 1), [], new Vec2(5, 5)));
+
+    [Fact]
+    public void Loop_FallsOnTop_OneContact() =>
+        AssertHit(0.4, new Vec2(5, 0), Up, One(Collision.CircleLoop(C(5, -5, 1), Box10, new Vec2(0, 10))));
+
+    [Fact]
+    public void Loop_ConvexCorner_OneContact()
+    {
+        // Diagonally into the top-left corner: both edges report the shared corner cap, kept once.
+        double t = (5 * Math.Sqrt(2) - 1) / (10 * Math.Sqrt(2));
+        AssertHit(t, Vec2.Zero, new Vec2(-R2, -R2), One(Collision.CircleLoop(C(-5, -5, 1), Box10, new Vec2(10, 10))));
+    }
+
+    [Fact]
+    public void Loop_VNotch_TwoContacts()
+    {
+        // A V cut into the top of a box, bottom of the V at (5, 5). A circle falling into it touches
+        // both slopes at once, with its center sqrt(2) above the bottom of the V.
+        IEdge[] v = Polygon(0, 0, 5, 5, 10, 0, 10, 10, 0, 10);
+        Hit[]? hits = Collision.CircleLoop(C(5, -5, 1), v, new Vec2(0, 20));
+        Assert.NotNull(hits);
+        Assert.Equal(2, hits.Length);
+        double t = (10 - Math.Sqrt(2)) / 20;
+        Hit left = hits.Single(h => h.Point.X < 5), right = hits.Single(h => h.Point.X > 5);
+        AssertHit(t, new Vec2(5 - R2, 5 - Math.Sqrt(2) + R2), new Vec2(R2, -R2), left);
+        AssertHit(t, new Vec2(5 + R2, 5 - Math.Sqrt(2) + R2), new Vec2(-R2, -R2), right);
+    }
+
+    [Fact]
+    public void Loop_SplitFloor_OneContact()
+    {
+        // A floor made of two pieces meeting at (5, 0): landing exactly on the join is one contact.
+        IEdge[] floor = [S(0, 0, 5, 0), S(5, 0, 10, 0)];
+        AssertHit(0.4, new Vec2(5, 0), Up, One(Collision.CircleLoop(C(5, -5, 1), floor, new Vec2(0, 10))));
+    }
+
+    [Fact]
+    public void Loop_StartsInside_CanLeave()
+    {
+        Assert.Null(Collision.CircleLoop(C(5, 5, 1), Box10, new Vec2(20, 0)));
+        Assert.Null(Collision.CircleLoop(C(5, 5, 1), Box10, new Vec2(10, 10)));
+    }
+
+    [Fact]
+    public void Loop_UShape_EarliestHitWins_WhateverTheOrder()
+    {
+        // A cup: a box with a notch from (3, 0) to (7, 7) open at the top. Moving right at y = 3 hits the
+        // left outer wall first (T = 0.075), and would hit the right arm's inner wall later (T = 0.425).
+        double[] cup = [0, 0, 3, 0, 3, 7, 7, 7, 7, 0, 10, 0, 10, 10, 0, 10];
+        IEdge[] edges = Polygon(cup);
+        for (int start = 0; start < edges.Length; start++)
+        {
+            IEdge[] rotated = edges.Skip(start).Concat(edges.Take(start)).ToArray();  // same loop, other first edge
+            var h = One(Collision.CircleLoop(C(-2, 3, 0.5), rotated, new Vec2(20, 0)));
+            AssertHit(0.075, new Vec2(0, 3), new Vec2(-1, 0), h);
+        }
+    }
+
+    [Fact]
+    public void Loop_ArcTop()
+    {
+        // A box whose top is a bump (center (5, 0), radius 5).
+        var bump = new Arc(new Vec2(5, 0), 5, Up, Math.PI / 2);
+        IEdge[] loop = [bump, Box10[1], Box10[2], Box10[3]];
+        AssertHit(0.4, new Vec2(5, -5), Up, One(Collision.CircleLoop(C(5, -10, 1), loop, new Vec2(0, 10))));
+    }
+
+    [Fact]
+    public void Loop_WithCurve_NotImplementedYet()
+    {
+        IEdge[] loop = [new Curve(new Vec2(0, 0), new Vec2(5, -3), new Vec2(10, 0)), Box10[1], Box10[2], Box10[3]];
+        Assert.Throws<NotImplementedException>(() => Collision.CircleLoop(C(5, -10, 1), loop, new Vec2(0, 10)));
+    }
+
+    [Fact]
+    public void Loop_RandomBoxes_TouchesAtTAndNotBefore()
+    {
+        // Random circles moving at random boxes from outside. If there's a hit, every contact is at T and
+        // just touching; no sampled moment before T overlaps. If there's no hit, it never overlaps.
+        var rng = new Random(13);
+        int hits = 0;
+        for (int i = 0; i < 3000; i++)
+        {
+            double x0 = rng.NextDouble() * 20, y0 = rng.NextDouble() * 20;
+            IEdge[] box = Box(x0, y0, x0 + 1 + rng.NextDouble() * 10, y0 + 1 + rng.NextDouble() * 10);
+            double r = 0.2 + rng.NextDouble() * 3;
+            Vec2 p = new(rng.NextDouble() * 40 - 10, rng.NextDouble() * 40 - 10);
+            double Dist(Vec2 at) => box.Min(e => (at - ((Segment)e).ClosestPoint(at)).Length);
+            if (Dist(p) <= r + 1e-3 || Overlap.PointInLoop(p, box)) continue;
+            Vec2 v = new(rng.NextDouble() * 40 - 20, rng.NextDouble() * 40 - 20);
+            Hit[]? hs = Collision.CircleLoop(new Circle(p, r), box, v);
+            double end = hs?[0].T ?? 1;
+            for (int k = 0; k < 400; k++)
+                Assert.True(Dist(p + (end * k / 400) * v) >= r - 1e-9, $"case {i}: overlaps before T");
+            if (hs == null) continue;
+            hits++;
+            foreach (Hit h in hs)
+            {
+                Vec2 center = p + h.T * v;
+                Assert.Equal(end, h.T, 1e-7);
+                Assert.Equal(r, (center - h.Point).Length, 1e-7);
+                Assert.True(Dist(h.Point) < 1e-7, $"case {i}: contact not on the box");
+                Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
+            }
+        }
+        Assert.True(hits > 150, $"only {hits} hits");
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Physics;
 
@@ -343,6 +344,58 @@ public static class Collision
             {
                 best[i] = new Hit(best[i].T, best[i].Point - c.Radius * best[i].Normal, best[i].Normal);
             }
+            return best.ToArray();
+        }
+        return null;
+    }
+
+    static Hit[]? CircleEdge(Circle c, IEdge a, Vec2 v) => a switch
+    {
+        Segment s => CircleSegment(c, s, v),
+        Arc r => CircleArc(c, r, v),
+        Curve cr => throw new NotImplementedException(),
+        _ => throw new NotImplementedException()
+    };
+
+    public static Hit[]? CircleLoop(Circle c, IReadOnlyList<IEdge> loop, Vec2 v)
+    {
+        List<Hit>? best = null;
+        foreach (IEdge edge in loop)
+        {
+            Hit[]? hits = CircleEdge(c, edge, v);
+            if (hits != null)
+            {
+                if (best == null)
+                {
+                    best = hits.ToList();
+                }
+                else
+                {
+                    if (Math.Abs(hits[0].T - best[0].T) < Vec2.Epsilon)
+                    {
+                        foreach (Hit h in hits)
+                        {
+                            bool unique = true;
+                            foreach (Hit hit in best)
+                            {
+                                if ((h.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon) 
+                                {
+                                    unique = false;
+                                    break;
+                                }
+                            }
+                            if (unique) {best.Add(h);}
+                        }
+                    }
+                    else if (hits[0].T < best[0].T)
+                    {
+                        best = hits.ToList();
+                    }
+                }
+            }
+        }
+        if (best != null)
+        {
             return best.ToArray();
         }
         return null;
