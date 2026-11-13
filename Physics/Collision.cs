@@ -6,7 +6,7 @@ namespace Physics;
 public static class Collision
 {
     // Used primarily to handle the tolerance for circle collision
-    public const double circleTolerance = 1e-6;
+    public const double CircleTolerance = 1e-6;
 
     public static Hit? PointSegment(Vec2 p, Segment s, Vec2 v)
     {
@@ -215,22 +215,22 @@ public static class Collision
         return firstHit;
     }
 
-    public static Hit? CircleCircle(Circle a, Circle b, Vec2 v)
+    public static Hit[]? CircleCircle(Circle a, Circle b, Vec2 v)
     {
         Circle collider = new Circle(b.Center, b.Radius + a.Radius);
         Hit? hit = PointCircle(a.Center, collider, v);
         if (hit != null)
         {
-            return new Hit(hit.Value.T, hit.Value.Point - a.Radius * hit.Value.Normal, hit.Value.Normal);
+            return [new Hit(hit.Value.T, hit.Value.Point - a.Radius * hit.Value.Normal, hit.Value.Normal)];
         }
         return null;
     }
 
-    public static Hit? CircleSegment(Circle c, Segment s, Vec2 v)
+    public static Hit[]? CircleSegment(Circle c, Segment s, Vec2 v)
     {
         Vec2 q = s.ClosestPoint(c.Center);
         double d = (c.Center - q).Length;
-        if (d < c.Radius - circleTolerance) {return null;}
+        if (d < c.Radius - CircleTolerance) {return null;}
         if (d <= c.Radius)
         {
             Vec2 n = (c.Center - q) / d;
@@ -238,7 +238,7 @@ public static class Collision
             {
                 if (Vec2.Dot(v, n) < 0)
                 {
-                    return new Hit(0, c.Center - c.Radius * n, n);
+                    return [new Hit(0, c.Center - c.Radius * n, n)];
                 }
             }
             return null;
@@ -248,12 +248,12 @@ public static class Collision
         void Consider(Hit? h)
         {
             if (h != null && (s.BothSolid || Vec2.Dot(h.Value.Normal, s.Normal) >= 0))
-        {
-            if (best == null || h.Value.T < best.Value.T)
             {
-                best = h;
+                if (best == null || h.Value.T < best.Value.T)
+                {
+                    best = h;
+                }
             }
-        }
         }
 
         if (s.BothSolid)
@@ -270,7 +270,81 @@ public static class Collision
         {
             // Correct best
             best = new Hit(best.Value.T, best.Value.Point - c.Radius * best.Value.Normal, best.Value.Normal);
+            return [best.Value];
         }
-        return best;
+        return null;
+    }
+
+    public static Hit[]? CircleArc(Circle c, Arc a, Vec2 v)
+    {
+        Vec2 q = a.ClosestPoint(c.Center);
+        double d = (c.Center - q).Length;
+        if (d < c.Radius - CircleTolerance) {return null;}
+        if (d <= c.Radius)
+        {
+            Vec2 n = (c.Center - q) / d;
+            if (a.BothSolid == true || Vec2.Dot(n, a.NormalAt(q)) >= 0)
+            {
+                if (Vec2.Dot(v, n) < 0)
+                {
+                    return [new Hit(0, c.Center - c.Radius * n, n)];
+                }
+            }
+            return null;
+        }
+        List<Hit>? best = null;
+        double cRad = a.Radius + c.Radius * Math.Sign(a.HalfAngle);
+        if (cRad > 0)
+        {
+            Hit? hitc = PointArc(c.Center, new Arc(a.Center, cRad, a.Direction, a.HalfAngle), v);
+            if (hitc != null)
+            {
+                best = [hitc.Value];
+            }
+        }
+
+        void Consider(Hit? h, Vec2 capPoint)
+        {
+            if (h != null && (a.BothSolid || Vec2.Dot(h.Value.Normal, a.NormalAt(capPoint)) >= 0))
+            {
+                if (best != null && Math.Abs(h.Value.T - best[0].T) < Vec2.Epsilon)
+                {
+                    foreach (Hit hit in best)
+                    {
+                        if ((h.Value.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon) {return;}
+                    }
+                    best.Add(h.Value);
+                }
+                else if (best == null || h.Value.T < best[0].T)
+                {
+                    best = [h.Value];
+                }
+            }
+        }
+
+        if (a.BothSolid)
+        {
+            cRad = a.Radius - c.Radius * Math.Sign(a.HalfAngle);
+            if (cRad > 0)
+            {
+                Hit? hitc = PointArc(c.Center, new Arc(a.Center, cRad, a.Direction, -a.HalfAngle), v);
+                // hitc because hit is used itself later
+                if (hitc != null) {Consider(hitc, hitc.Value.Point);}
+            }
+        }
+        Hit? hit = PointCircle(c.Center, new Circle(a.Start, c.Radius), v);
+        Consider(hit, a.Start);
+        hit = PointCircle(c.Center, new Circle(a.End, c.Radius), v);
+        Consider(hit, a.End);
+        if (best != null)
+        {
+            // Correct best
+            for (int i = 0; i < best.Count; i++)
+            {
+                best[i] = new Hit(best[i].T, best[i].Point - c.Radius * best[i].Normal, best[i].Normal);
+            }
+            return best.ToArray();
+        }
+        return null;
     }
 }
