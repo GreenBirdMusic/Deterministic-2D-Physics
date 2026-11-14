@@ -118,4 +118,10 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
     }
 
     public bool IsBothSolid() {return BothSolid;}
+
+    IEdge IEdge.Transformed(Transform t) => Transformed(t);
+    public Arc Transformed(Transform t)
+    {
+        return new Arc(t.Apply(Center), Radius, t.ApplyDirection(Direction), HalfAngle, BothSolid);
+    }
 }

@@ -43,5 +43,18 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
         return false;
     }
 
+    IEdge IEdge.Transformed(Transform t) => Transformed(t);
+    public Segment Transformed(Transform t)
+    {
+        Vec2 start = t.Apply(Start);
+        Vec2 end =  t.Apply(End);
+
+        if (t.Mirrored)
+        {
+            return new Segment(end, start, BothSolid);
+        }
+        return new Segment(start, end, BothSolid);
+    }
+
     public bool IsBothSolid() {return BothSolid;}
 }

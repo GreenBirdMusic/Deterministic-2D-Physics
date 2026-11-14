@@ -127,4 +127,18 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
     }
 
     public bool IsBothSolid() {return BothSolid;}
+
+    IEdge IEdge.Transformed(Transform t) => Transformed(t);
+    public Curve Transformed(Transform t)
+    {
+        Vec2 start = t.Apply(Start);
+        Vec2 cont = t.Apply(Control);
+        Vec2 end =  t.Apply(End);
+
+        if (t.Mirrored)
+        {
+            return new Curve(end, cont, start, BothSolid);
+        }
+        return new Curve(start, cont, end, BothSolid);
+    }
 }
