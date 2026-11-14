@@ -1,4 +1,4 @@
-// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment, SegmentArc, ArcArc), written by Claude. Dev-only, never part of the game.
+// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment, SegmentArc, ArcArc, SegmentCurve), written by Claude. Dev-only, never part of the game.
 using Physics;
 
 namespace PhysicsTests;
@@ -417,6 +417,129 @@ public class EdgeCollisionTests
                 Assert.Equal(end, h.T, 1e-7);
                 Assert.True((h.Point - m.ClosestPoint(h.Point)).Length < 1e-7 && (h.Point - b.ClosestPoint(h.Point)).Length < 1e-7,
                     $"case {i}: contact not on both arcs");
+                Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
+            }
+        }
+        Assert.True(hits > 200, $"only {hits} hits");
+    }
+
+    // ---- SegmentCurve (the segment moves, the curve stays still) ----
+    // Hill: (-5, 0) -> (0, -10) -> (5, 0), solid underneath, top at (0, -5). x = -5 + 10t, y = -20t + 20t^2.
+    // Valley: (-5, 0) -> (0, 10) -> (5, 0), solid underneath, bottom at (0, 5).
+
+    static Curve Hill(bool both = false) => new(new Vec2(-5, 0), new Vec2(0, -10), new Vec2(5, 0), both);
+    static Curve Valley() => new(new Vec2(-5, 0), new Vec2(0, 10), new Vec2(5, 0));
+
+    [Fact]
+    public void Curve_FlatLandsOnTopOfHill_ExtremePoint() =>
+        AssertContacts(0.3, Collision.SegmentCurve(S(2, -8, -2, -8), Hill(), new Vec2(0, 10)),
+            (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void Curve_SegmentEndLandsOnHillSide()
+    {
+        // The left end (1, -8) is the highest part over the hill: lands at (1, -4.8), t = 0.6.
+        var c = Hill();
+        AssertContacts(0.32, Collision.SegmentCurve(S(4, -8, 1, -8), c, new Vec2(0, 10)),
+            (new Vec2(1, -4.8), c.NormalAt(0.6)));
+    }
+
+    [Fact]
+    public void Curve_CurveEndHitsMovingWall() =>
+        // A box's left side (solid to the right) moves left into the hill's right end (5, 0).
+        AssertContacts(0.5, Collision.SegmentCurve(S(10, 10, 10, -10), Hill(), new Vec2(-10, 0)),
+            (new Vec2(5, 0), new Vec2(1, 0)));
+
+    [Fact]
+    public void Curve_FlatIntoValley_EndsTouchFirst()
+    {
+        // Ends at x = +-2 (t = 0.3 and 0.7, y = 4.2) land before the middle reaches the bottom.
+        var c = Valley();
+        AssertContacts(0.72, Collision.SegmentCurve(S(2, -3, -2, -3), c, new Vec2(0, 10)),
+            (new Vec2(-2, 4.2), c.NormalAt(0.3)), (new Vec2(2, 4.2), c.NormalAt(0.7)));
+    }
+
+    [Fact]
+    public void Curve_UpThroughOneSidedHill_NoHit() =>
+        // A box's top edge rising from inside the hill: every contact would be from the solid side.
+        Assert.Null(Collision.SegmentCurve(S(-2, 3, 2, 3), Hill(), new Vec2(0, -10)));
+
+    [Fact]
+    public void Curve_UpIntoBothSolidHill_EndsHitFromInside()
+    {
+        var c = Hill(true);
+        AssertContacts(0.72, Collision.SegmentCurve(S(-2, 3, 2, 3), c, new Vec2(0, -10)),
+            (new Vec2(-2, -4.2), -c.NormalAt(0.3)), (new Vec2(2, -4.2), -c.NormalAt(0.7)));
+    }
+
+    [Fact]
+    public void Curve_RestingOnTopOfHill_MovingDown_HitAtZero() =>
+        AssertContacts(0, Collision.SegmentCurve(S(2, -5, -2, -5), Hill(), new Vec2(0, 1)),
+            (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void Curve_RestingOnTopOfHill_Sliding_NoHit() =>
+        Assert.Null(Collision.SegmentCurve(S(2, -5, -2, -5), Hill(), new Vec2(1, 0)));
+
+    [Fact]
+    public void Curve_AlreadyCrossing_NoHit() =>
+        Assert.Null(Collision.SegmentCurve(S(2, -3, -2, -3), Hill(), new Vec2(0, 10)));
+
+    [Fact]
+    public void Curve_StopsShort_NoHit() =>
+        Assert.Null(Collision.SegmentCurve(S(2, -8, -2, -8), Hill(), new Vec2(0, 2.9)));
+
+    [Fact]
+    public void Curve_StraightCurve_EndsLand() =>
+        // Control on the line: no bend, so no extreme point; the segment's ends do the work.
+        AssertContacts(0.5, Collision.SegmentCurve(S(2, -5, -2, -5), new Curve(new Vec2(-5, 0), new Vec2(0, 0), new Vec2(5, 0)), new Vec2(0, 10)),
+            (new Vec2(-2, 0), Up), (new Vec2(2, 0), Up));
+
+    [Fact]
+    public void Curve_RandomBothSolid_TouchesAtTAndNotBefore()
+    {
+        var rng = new Random(29);
+        int hits = 0;
+        static double Dist(Segment s, Curve c)
+        {
+            var d = new List<double>
+            {
+                (s.Start - c.ClosestPoint(s.Start)).Length, (s.End - c.ClosestPoint(s.End)).Length,
+                (c.Start - s.ClosestPoint(c.Start)).Length, (c.End - s.ClosestPoint(c.End)).Length,
+            };
+            double bn = Vec2.Dot(c.Bend, s.Normal);
+            if (Math.Abs(bn) > 1e-9)
+            {
+                double t = -Vec2.Dot(c.Control - c.Start, s.Normal) / bn;
+                if (0 <= t && t <= 1) { Vec2 e = c.PointAt(t); d.Add((e - s.ClosestPoint(e)).Length); }
+            }
+            return d.Min();
+        }
+        Vec2 Rand() => new(rng.NextDouble() * 20, rng.NextDouble() * 20);
+        for (int i = 0; i < 5000; i++)
+        {
+            Segment s = new(Rand(), Rand(), true);
+            var c = new Curve(Rand(), Rand(), Rand(), true);
+            if ((s.End - s.Start).Length < 0.5 || (c.End - c.Start).Length < 0.5) continue;
+            if (Overlap.SegmentCurve(s, c) != null || Dist(s, c) < 1e-3) continue;
+            Vec2 v = new(rng.NextDouble() * 30 - 15, rng.NextDouble() * 30 - 15);
+            Hit[]? hs = Collision.SegmentCurve(s, c, v);
+            double end = hs?[0].T ?? 1;
+            for (int k = 0; k < 400; k++)
+            {
+                Vec2 off = (end * k / 400) * v;
+                Assert.True(Overlap.SegmentCurve(new Segment(s.Start + off, s.End + off), c) == null, $"case {i}: overlaps before T");
+            }
+            if (hs == null) continue;
+            hits++;
+            Vec2 o = end * v;
+            var moved = new Segment(s.Start + o, s.End + o, true);
+            Assert.True(Dist(moved, c) < 1e-7, $"case {i}: not touching at T");
+            foreach (Hit h in hs)
+            {
+                Assert.Equal(end, h.T, 1e-7);
+                Assert.True((h.Point - moved.ClosestPoint(h.Point)).Length < 1e-7 && (h.Point - c.ClosestPoint(h.Point)).Length < 1e-7,
+                    $"case {i}: contact not on both edges");
                 Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
             }
         }

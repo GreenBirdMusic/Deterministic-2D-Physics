@@ -587,4 +587,36 @@ public static class Collision
         }
         return null;
     }
+
+    public static Hit[]? SegmentCurve(Segment s, Curve c, Vec2 v)
+    {
+        double? t = null;
+        Vec2? ext = null;
+        if (Math.Abs(Vec2.Dot(c.Bend, s.Normal)) > Vec2.Epsilon * Vec2.Epsilon) 
+        {
+            t = -Vec2.Dot(c.Control - c.Start, s.Normal) / Vec2.Dot(c.Bend, s.Normal);
+            ext = c.PointAt(t.Value);
+        }
+        if (Overlap.SegmentCurve(s, c) != null &&
+            (s.Start - c.ClosestPoint(s.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (s.End - c.ClosestPoint(s.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (c.Start - s.ClosestPoint(c.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (c.End - s.ClosestPoint(c.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (t == null || ext == null || t.Value < 0 || 1 < t.Value || (ext.Value - s.ClosestPoint(ext.Value)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
+        ) {return null;}
+        List<Hit>? best = null;
+        best = BestCollision(best, s.Start, c, v, s, false);
+        best = BestCollision(best, s.End, c, v, s, false);
+        best = BestCollision(best, c.Start, s, -v, c, true);
+        best = BestCollision(best, c.End, s, -v, c, true);
+        if (t != null && ext != null && 0 <= t.Value && t.Value <= 1)
+        {
+            best = BestCollision(best, ext.Value, s, -v, c, true);
+        }
+        if (best != null)
+        {
+            return best.ToArray();
+        }
+        return null;
+    }
 }
