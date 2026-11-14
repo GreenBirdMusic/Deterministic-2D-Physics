@@ -153,4 +153,32 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         return Vec2.Cross(Start, End) * (Start + End) / 6 + 
         Vec2.Cross(Control - Start, End - Start)/3 * cCenter;
     }
+
+    // 4-point Gauss-Legendre on [0, 1]
+    private static readonly double[] GaussT = {
+        0.06943184420297371, 
+        0.33000947820757187, 
+        0.6699905217924281, 
+        0.9305681557970262
+    };
+    private static readonly double[] GaussW = {
+        0.1739274225687269, 
+        0.32607257743127305, 
+        0.32607257743127305, 
+        0.1739274225687269
+    };
+
+
+    public double RotationalInertia()
+    {
+        double output = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            double t = GaussT[i];
+            Vec2 p = PointAt(t);
+            Vec2 d = 2 * (1 - t) * (Control - Start) + 2 * t * (End - Control);
+            output += GaussW[i] * p.LengthSquared * Vec2.Cross(p, d);
+        }
+        return output/4;
+    }
 }

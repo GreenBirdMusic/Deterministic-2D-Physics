@@ -14,4 +14,6 @@ public interface IEdge
 
     double AreaPiece();
     Vec2 Moment();
+
+    double RotationalInertia();
 }

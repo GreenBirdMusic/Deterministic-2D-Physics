@@ -67,4 +67,9 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     {
         return Vec2.Cross(Start, End) * (Start + End) / 6;
     }
+
+    public double RotationalInertia()
+    {
+        return Vec2.Cross(Start, End) * (Vec2.Dot(Start, Start) + Vec2.Dot(Start, End) + Vec2.Dot(End, End)) / 12;
+    }
 }

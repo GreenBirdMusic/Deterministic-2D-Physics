@@ -23,6 +23,9 @@ public class EdgeList
     private readonly Vec2 moment;
     public Vec2 Moment => moment;
 
+    private readonly double rotationalInertia;
+    public double RotationalInertia => rotationalInertia;
+
     public EdgeList(IEdge[] edges, bool closed, ulong[]? tags = null)
     {
         if (edges.Length == 0) {throw new ArgumentException("Must provide at least one edge");}
@@ -50,6 +53,7 @@ public class EdgeList
         worldEdges = (IEdge[])edges.Clone();
         area = 0;
         moment = new Vec2(0, 0);
+        rotationalInertia = 0;
         foreach (IEdge edge in edges)
         {
             double testReach = edge switch
@@ -61,9 +65,11 @@ public class EdgeList
             };
             if (testReach > Reach) {Reach = testReach;}
 
-            if (closed) {area += edge.AreaPiece();}
-
-            if (closed) {moment += edge.Moment();}
+            if (closed) {
+                area += edge.AreaPiece();
+                moment += edge.Moment();
+                rotationalInertia += edge.RotationalInertia();
+            }
         }
     }
 

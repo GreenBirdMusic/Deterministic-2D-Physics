@@ -137,4 +137,13 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2 + Direction * 2/3 *
         Radius * Radius * Radius * sin * sin * sin;
     }
+
+    public double RotationalInertia()
+    {
+        double sin = Math.Sin(HalfAngle);
+        double r4 = Radius * Radius * Radius * Radius;
+        return Vec2.Cross(Start, End) * (Vec2.Dot(Start, Start) + Vec2.Dot(Start, End) + Vec2.Dot(End, End)) / 12 +
+        r4 * HalfAngle / 2 - r4 * Math.Sin(2 * HalfAngle) * (2 + Math.Cos(2 * HalfAngle)) / 12 + Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2 * Center.LengthSquared + 4 *
+        Radius * Radius * Radius * sin * sin * sin * Vec2.Dot(Center, Direction) / 3;
+    }
 }

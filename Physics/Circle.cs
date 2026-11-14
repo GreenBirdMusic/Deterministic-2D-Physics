@@ -8,4 +8,9 @@ public readonly record struct Circle(Vec2 Center, double Radius)
     {
         return new Circle(t.Apply(Center), Radius);
     }
+
+    public double RotationalInertia()
+    {
+        return Math.PI * (Radius * Radius * Radius * Radius / 2 + Radius * Radius * Center.LengthSquared);
+    }
 }

@@ -35,6 +35,9 @@ public class ColliderSet
     private readonly Vec2 center;
     public Vec2 Center => center;
 
+    private readonly double rotationalInertia;
+    public double RotationalInertia => rotationalInertia;
+
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}
@@ -54,12 +57,14 @@ public class ColliderSet
         this.edgeLists = (EdgeList[])edgeLists.Clone();
         area = 0;
         moment = new Vec2();
+        rotationalInertia = 0;
         foreach (Circle circle in circles)
         {
             double testReach = circle.Center.Length + circle.Radius;
             if (testReach > Reach) {Reach = testReach;}
             area += circle.Radius * circle.Radius;
             moment += circle.Radius * circle.Radius * circle.Center;
+            rotationalInertia += circle.RotationalInertia();
         }
         area *= Math.PI; // Intentionally reducing how many times I multiply by pi
         moment *= Math.PI;
@@ -68,6 +73,7 @@ public class ColliderSet
             if (edges.Reach > Reach) {Reach = edges.Reach;}
             area += edges.Area;
             moment += edges.Moment;
+            rotationalInertia += edges.RotationalInertia;
         }
         if (area != 0)
         {
