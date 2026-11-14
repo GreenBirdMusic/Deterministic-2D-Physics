@@ -667,4 +667,36 @@ public static class Collision
         }
         return null;
     }
+
+    static Hit[]? AdjustByVelocity(Hit[]? hits, Vec2 vb)
+    {
+        if (hits == null) {return null;}
+        for (int i = 0; i < hits.Length; i++)
+        {
+            hits[i] = hits[i] with {Point = hits[i].Point + hits[i].T * vb};
+        }
+        return hits;
+    }
+
+    public static Hit[]? CircleCircle(Circle a, Circle b, Vec2 va, Vec2 vb)
+    {
+        return AdjustByVelocity(CircleCircle(a, b, va - vb), vb);
+    }
+
+    public static Hit[]? CircleLoop(Circle c, IReadOnlyList<IEdge> loop, Vec2 va, Vec2 vb)
+    {
+        return AdjustByVelocity(CircleLoop(c, loop, va - vb), vb);
+    }
+
+    public static Hit[]? LoopLoop(IReadOnlyList<IEdge> a, IReadOnlyList<IEdge> b, Vec2 va, Vec2 vb)
+    {
+        return AdjustByVelocity(LoopLoop(a, b, va - vb), vb);
+    }
+
+    public static Hit? PointLoop(Vec2 p, IReadOnlyList<IEdge> loop, Vec2 va, Vec2 vb)
+    {
+        Hit? hit = PointLoop(p, loop, va - vb);
+        if (hit == null) {return null;}
+        return hit.Value with {Point = hit.Value.Point + hit.Value.T * vb};
+    }
 }
