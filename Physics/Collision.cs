@@ -7,7 +7,7 @@ namespace Physics;
 public static class Collision
 {
     // Used primarily to handle the tolerance for circle collision
-    public const double CircleTolerance = 1e-6;
+    public const double StepTolerance = 1e-6;
 
     public static Hit? PointSegment(Vec2 p, Segment s, Vec2 v)
     {
@@ -231,7 +231,7 @@ public static class Collision
     {
         Vec2 q = s.ClosestPoint(c.Center);
         double d = (c.Center - q).Length;
-        if (d < c.Radius - CircleTolerance) {return null;}
+        if (d < c.Radius - StepTolerance) {return null;}
         if (d <= c.Radius)
         {
             Vec2 n = (c.Center - q) / d;
@@ -280,7 +280,7 @@ public static class Collision
     {
         Vec2 q = a.ClosestPoint(c.Center);
         double d = (c.Center - q).Length;
-        if (d < c.Radius - CircleTolerance) {return null;}
+        if (d < c.Radius - StepTolerance) {return null;}
         if (d <= c.Radius)
         {
             Vec2 n = (c.Center - q) / d;
@@ -401,5 +401,61 @@ public static class Collision
         return null;
     }
 
-    
+    public static Hit[]? SegmentSegment(Segment s, Segment t, Vec2 v)
+    {
+        if (Overlap.SegmentSegment(s, t) != null &&
+            (s.Start - t.ClosestPoint(s.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (s.End - t.ClosestPoint(s.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (t.Start - s.ClosestPoint(t.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (t.End - s.ClosestPoint(t.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon
+        ) {return null;}
+        List<Hit>? best = null;
+
+        void Consider(Vec2 p, Segment seg, Vec2 vel, Segment source, bool flip)
+        {
+            Hit? h = PointSegment(p, seg, vel);
+            if (h == null && (p - seg.ClosestPoint(p)).LengthSquared <= Vec2.Epsilon * Vec2.Epsilon)
+            {
+                Vec2 n = seg.Normal;
+                double velDot = Vec2.Dot(vel, n);
+                if (seg.BothSolid && velDot > 0)
+                {
+                    n = -n;
+                    velDot = -velDot;
+                }
+                if (velDot < 0)
+                {
+                    h = new Hit(0, p, n);
+                }
+            }
+            if (h != null && (source.BothSolid || Vec2.Dot(h.Value.Normal, source.Normal) <= 0))
+            {
+                if (flip) {h = new Hit(h.Value.T, p, -h.Value.Normal);}
+                if (best != null && Math.Abs(h.Value.T - best[0].T) < Vec2.Epsilon)
+                {
+                    foreach (Hit hit in best)
+                    {
+                        if (
+                            (h.Value.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon &&
+                            (hit.Point - h.Value.Point).LengthSquared < Vec2.Epsilon * Vec2.Epsilon
+                        ) {return;}
+                    }
+                    best.Add(new Hit(h.Value.T, h.Value.Point, h.Value.Normal));
+                }
+                else if (best == null || h.Value.T < best[0].T)
+                {
+                    best = [new Hit(h.Value.T, h.Value.Point, h.Value.Normal)];
+                }
+            }
+        }
+        Consider(s.Start, t, v, s, false);
+        Consider(s.End, t, v, s, false);
+        Consider(t.Start, s, -v, t, true);
+        Consider(t.End, s, -v, t, true);
+        if (best != null)
+        {
+            return best.ToArray();
+        }
+        return null;
+    }
 }
