@@ -619,4 +619,28 @@ public static class Collision
         }
         return null;
     }
+
+    static Hit[]? ReverseHits(Hit[]? hits)
+    {
+        if (hits == null) {return hits;}
+        for (int i = 0; i < hits.Length; i++)
+        {
+            hits[i] = hits[i] with {Normal = -hits[i].Normal};
+        }
+        return hits;
+    }
+
+    static Hit[]? EdgesCollide(IEdge a, IEdge b, Vec2 v) => (a, b) switch
+    {
+        (Segment s, Segment t) => SegmentSegment(s, t, v),
+        (Segment s, Arc r) => SegmentArc(s, r, v),
+        (Segment s, Curve c) => SegmentCurve(s, c, v),
+        (Arc r, Segment s) => ReverseHits(SegmentArc(s, r, -v)),
+        (Arc r, Arc ar) => ArcArc(r, ar, v),
+        (Arc r, Curve c) => throw new NotImplementedException(),
+        (Curve c, Segment s) => ReverseHits(SegmentCurve(s, c, -v)),
+        (Curve c, Arc r) => throw new NotImplementedException(),
+        (Curve c, Curve cv) => throw new NotImplementedException(),
+        _ => throw new NotImplementedException()
+    };
 }
