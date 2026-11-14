@@ -93,6 +93,11 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         return (-TangentAt(t).Perp()).Normalized();
     }
 
+    public Vec2 NormalAt(Vec2 p)
+    {
+        return NormalAt(ClosestT(p));
+    }
+
     /// <summary>
     /// Returns whether or not the given Vec2 p is towards the solid side of the curve
     /// </summary>
@@ -120,4 +125,6 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         }
         return false;
     }
+
+    public bool IsBothSolid() {return BothSolid;}
 }

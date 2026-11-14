@@ -21,6 +21,11 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     /// </summary>
     public Vec2 Normal => (-(End - Start).Perp()).Normalized();
 
+    public Vec2 NormalAt(Vec2 p)
+    {
+        return Normal;
+    }
+
     /// <summary>
     /// Returns whether or not the given Vec2 p is towards the solid side of the line the segment lies on.
     /// </summary>
@@ -37,4 +42,6 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     {
         return false;
     }
+
+    public bool IsBothSolid() {return BothSolid;}
 }

@@ -116,4 +116,6 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         }
         return false;
     }
+
+    public bool IsBothSolid() {return BothSolid;}
 }

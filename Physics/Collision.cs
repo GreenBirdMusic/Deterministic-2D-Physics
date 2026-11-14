@@ -401,6 +401,45 @@ public static class Collision
         return null;
     }
 
+    private static List<Hit>? bestCollision(List<Hit>? best, Vec2 p, IEdge edge, Vec2 vel, IEdge source, bool flip)
+    {
+        Hit? h = PointEdge(p, edge, vel);
+        if (h == null && (p - edge.ClosestPoint(p)).LengthSquared <= Vec2.Epsilon * Vec2.Epsilon)
+        {
+            Vec2 n = edge.NormalAt(p);
+            double velDot = Vec2.Dot(vel, n);
+            if (edge.IsBothSolid() && velDot > 0)
+            {
+                n = -n;
+                velDot = -velDot;
+            }
+            if (velDot < 0)
+            {
+                h = new Hit(0, p, n);
+            }
+        }
+        if (h != null && (source.IsBothSolid() || Vec2.Dot(h.Value.Normal, source.NormalAt(p)) <= 0))
+        {
+            if (flip) {h = new Hit(h.Value.T, p, -h.Value.Normal);}
+            if (best != null && Math.Abs(h.Value.T - best[0].T) < Vec2.Epsilon)
+            {
+                foreach (Hit hit in best)
+                {
+                    if (
+                        (h.Value.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon &&
+                        (hit.Point - h.Value.Point).LengthSquared < Vec2.Epsilon * Vec2.Epsilon
+                    ) {return best;}
+                }
+                best.Add(new Hit(h.Value.T, h.Value.Point, h.Value.Normal));
+            }
+            else if (best == null || h.Value.T < best[0].T)
+            {
+                best = [new Hit(h.Value.T, h.Value.Point, h.Value.Normal)];
+            }
+        }
+        return best;
+    }
+
     public static Hit[]? SegmentSegment(Segment s, Segment t, Vec2 v)
     {
         if (Overlap.SegmentSegment(s, t) != null &&
@@ -410,48 +449,10 @@ public static class Collision
             (t.End - s.ClosestPoint(t.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon
         ) {return null;}
         List<Hit>? best = null;
-
-        void Consider(Vec2 p, Segment seg, Vec2 vel, Segment source, bool flip)
-        {
-            Hit? h = PointSegment(p, seg, vel);
-            if (h == null && (p - seg.ClosestPoint(p)).LengthSquared <= Vec2.Epsilon * Vec2.Epsilon)
-            {
-                Vec2 n = seg.Normal;
-                double velDot = Vec2.Dot(vel, n);
-                if (seg.BothSolid && velDot > 0)
-                {
-                    n = -n;
-                    velDot = -velDot;
-                }
-                if (velDot < 0)
-                {
-                    h = new Hit(0, p, n);
-                }
-            }
-            if (h != null && (source.BothSolid || Vec2.Dot(h.Value.Normal, source.Normal) <= 0))
-            {
-                if (flip) {h = new Hit(h.Value.T, p, -h.Value.Normal);}
-                if (best != null && Math.Abs(h.Value.T - best[0].T) < Vec2.Epsilon)
-                {
-                    foreach (Hit hit in best)
-                    {
-                        if (
-                            (h.Value.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon &&
-                            (hit.Point - h.Value.Point).LengthSquared < Vec2.Epsilon * Vec2.Epsilon
-                        ) {return;}
-                    }
-                    best.Add(new Hit(h.Value.T, h.Value.Point, h.Value.Normal));
-                }
-                else if (best == null || h.Value.T < best[0].T)
-                {
-                    best = [new Hit(h.Value.T, h.Value.Point, h.Value.Normal)];
-                }
-            }
-        }
-        Consider(s.Start, t, v, s, false);
-        Consider(s.End, t, v, s, false);
-        Consider(t.Start, s, -v, t, true);
-        Consider(t.End, s, -v, t, true);
+        best = bestCollision(best, s.Start, t, v, s, false);
+        best = bestCollision(best, s.End, t, v, s, false);
+        best = bestCollision(best, t.Start, s, -v, t, true);
+        best = bestCollision(best, t.End, s, -v, t, true);
         if (best != null)
         {
             return best.ToArray();
