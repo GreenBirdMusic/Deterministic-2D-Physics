@@ -11,4 +11,6 @@ public interface IEdge
     public Vec2 NormalAt(Vec2 p);
     public bool IsBothSolid();
     IEdge Transformed(Transform t);
+
+    double AreaPiece();
 }

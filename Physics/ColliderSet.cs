@@ -24,6 +24,9 @@ public class ColliderSet
     private readonly EdgeList[] edgeLists;
     public IReadOnlyList<EdgeList> EdgeLists => edgeLists;
 
+    private readonly double area;
+    public double Area => area;
+
     public double Reach {get;}
 
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null)
@@ -43,14 +46,18 @@ public class ColliderSet
         worldCircles = (Circle[])circles.Clone();
         Group = group;
         this.edgeLists = (EdgeList[])edgeLists.Clone();
-        foreach (EdgeList edges in edgeLists)
-        {
-            if (edges.Reach > Reach) {Reach = edges.Reach;}
-        }
+        area = 0;
         foreach (Circle circle in circles)
         {
             double testReach = circle.Center.Length + circle.Radius;
             if (testReach > Reach) {Reach = testReach;}
+            area += circle.Radius * circle.Radius;
+        }
+        area *= Math.PI; // Intentionally reducing how many times I multiply by pi
+        foreach (EdgeList edges in edgeLists)
+        {
+            if (edges.Reach > Reach) {Reach = edges.Reach;}
+            area += edges.Area;
         }
     }
 

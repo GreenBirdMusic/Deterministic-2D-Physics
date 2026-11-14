@@ -17,6 +17,9 @@ public class EdgeList
 
     public double Reach {get;}
 
+    private readonly double area;
+    public double Area => area;
+
     public EdgeList(IEdge[] edges, bool closed, ulong[]? tags = null)
     {
         if (edges.Length == 0) {throw new ArgumentException("Must provide at least one edge");}
@@ -42,6 +45,7 @@ public class EdgeList
         Closed = closed;
         localEdges = (IEdge[])edges.Clone();
         worldEdges = (IEdge[])edges.Clone();
+        area = 0;
         foreach (IEdge edge in edges)
         {
             double testReach = edge switch
@@ -52,6 +56,8 @@ public class EdgeList
                 _ => throw new NotImplementedException()
             };
             if (testReach > Reach) {Reach = testReach;}
+
+            if (closed) {area += edge.AreaPiece();}
         }
     }
 

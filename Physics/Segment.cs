@@ -57,4 +57,9 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     }
 
     public bool IsBothSolid() {return BothSolid;}
+
+    public double AreaPiece()
+    {
+        return Vec2.Cross(Start, End)/2;
+    }
 }

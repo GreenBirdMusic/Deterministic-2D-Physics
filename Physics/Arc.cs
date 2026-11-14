@@ -124,4 +124,9 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
     {
         return new Arc(t.Apply(Center), Radius, t.ApplyDirection(Direction), HalfAngle, BothSolid);
     }
+
+    public double AreaPiece()
+    {
+        return Vec2.Cross(Start, End)/2 + Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2;
+    }
 }

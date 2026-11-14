@@ -141,4 +141,9 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         }
         return new Curve(start, cont, end, BothSolid);
     }
+
+    public double AreaPiece()
+    {
+        return Vec2.Cross(Start, End)/2 + Vec2.Cross(Control - Start, End - Start)/3;
+    }
 }
