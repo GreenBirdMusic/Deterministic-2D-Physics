@@ -459,4 +459,36 @@ public static class Collision
         }
         return null;
     }
+
+    public static Hit[]? SegmentArc(Segment s, Arc a, Vec2 v)
+    {
+        Vec2 ext1 = a.Center + a.Radius * s.Normal;
+        Vec2 ext2 = a.Center - a.Radius * s.Normal;
+        if (Overlap.SegmentArc(s, a) != null &&
+            (s.Start - a.ClosestPoint(s.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (s.End - a.ClosestPoint(s.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (a.Start - s.ClosestPoint(a.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (a.End - s.ClosestPoint(a.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (a.IsWithinAngle(ext1 - a.Center) == false || (ext1 - s.ClosestPoint(ext1)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon) &&
+            (a.IsWithinAngle(ext2 - a.Center) == false || (ext2 - s.ClosestPoint(ext2)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
+        ) {return null;}
+        List<Hit>? best = null;
+        best = bestCollision(best, s.Start, a, v, s, false);
+        best = bestCollision(best, s.End, a, v, s, false);
+        best = bestCollision(best, a.Start, s, -v, a, true);
+        best = bestCollision(best, a.End, s, -v, a, true);
+        if (a.IsWithinAngle(ext1 - a.Center))
+        {
+            best = bestCollision(best, ext1, s, -v, a, true);
+        }
+        if (a.IsWithinAngle(ext2 - a.Center))
+        {
+            best = bestCollision(best, ext2, s, -v, a, true);
+        }
+        if (best != null)
+        {
+            return best.ToArray();
+        }
+        return null;
+    }
 }

@@ -1,4 +1,4 @@
-// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment so far), written by Claude. Dev-only, never part of the game.
+// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment, SegmentArc), written by Claude. Dev-only, never part of the game.
 using Physics;
 
 namespace PhysicsTests;
@@ -165,5 +165,116 @@ public class EdgeCollisionTests
             }
         }
         Assert.True(hits > 300, $"only {hits} hits");
+    }
+    // ---- SegmentArc (the segment moves, the arc stays still) ----
+    // Bump: top half of the circle at (0, 0), radius 5, solid inside. Bowl: bottom half, open inside.
+
+    static Arc Bump(bool both = false) => new(Vec2.Zero, 5, Up, Math.PI / 2, both);
+    static Arc Bowl() => new(Vec2.Zero, 5, Down, -Math.PI / 2);
+    static readonly double S21 = Math.Sqrt(21);
+
+    [Fact]
+    public void Arc_FlatLandsOnTopOfBump_ExtremePoint() =>
+        AssertContacts(0.3, Collision.SegmentArc(S(2, -8, -2, -8), Bump(), new Vec2(0, 10)),
+            (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void Arc_SegmentEndLandsOnBump() =>
+        // The extreme point (0, -5) is outside the segment's x range, so its left end (3, -8) lands first.
+        AssertContacts(0.4, Collision.SegmentArc(S(6, -8, 3, -8), Bump(), new Vec2(0, 10)),
+            (new Vec2(3, -4), new Vec2(0.6, -0.8)));
+
+    [Fact]
+    public void Arc_ArcEndHitsSegment() =>
+        // A box's left edge moving left into the bump's right end (5, 0).
+        AssertContacts(0.3, Collision.SegmentArc(S(8, 2, 8, -2), Bump(), new Vec2(-10, 0)),
+            (new Vec2(5, 0), new Vec2(1, 0)));
+
+    [Fact]
+    public void Arc_IntoBowl_EndsTouchFirst() =>
+        // A box's bottom edge dropping into the bowl: its ends touch the sides before the bottom.
+        AssertContacts((S21 + 1) / 10, Collision.SegmentArc(S(2, -1, -2, -1), Bowl(), new Vec2(0, 10)),
+            (new Vec2(2, S21), new Vec2(-2, -S21) / 5), (new Vec2(-2, S21), new Vec2(2, -S21) / 5));
+
+    [Fact]
+    public void Arc_UpThroughOneSidedBump_NoHit() =>
+        // A box's top edge rising from below, through the inside of the bump: passes through. The lower
+        // extreme point (0, 5) is not on the arc, so it must not be swept.
+        Assert.Null(Collision.SegmentArc(S(-2, 8, 2, 8), Bump(), new Vec2(0, -20)));
+
+    [Fact]
+    public void Arc_UpIntoBothSolidBump_EndsHitFromInside() =>
+        AssertContacts((8 + S21) / 20, Collision.SegmentArc(S(-2, 8, 2, 8), Bump(true), new Vec2(0, -20)),
+            (new Vec2(-2, -S21), new Vec2(2, S21) / 5), (new Vec2(2, -S21), new Vec2(-2, S21) / 5));
+
+    [Fact]
+    public void Arc_RestingOnTopOfBump_MovingDown_HitAtZero() =>
+        // Resting on the bump's top: touches in the middle of both edges, not at an end.
+        AssertContacts(0, Collision.SegmentArc(S(2, -5, -2, -5), Bump(), new Vec2(0, 1)),
+            (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void Arc_RestingOnTopOfBump_Sliding_NoHit() =>
+        Assert.Null(Collision.SegmentArc(S(2, -5, -2, -5), Bump(), new Vec2(1, 0)));
+
+    [Fact]
+    public void Arc_AlreadyCrossing_NoHit() =>
+        // A segment cutting through the bump at y = -3, moving down: free to leave.
+        Assert.Null(Collision.SegmentArc(S(6, -3, -6, -3), Bump(), new Vec2(0, 10)));
+
+    [Fact]
+    public void Arc_StopsShort_NoHit() =>
+        Assert.Null(Collision.SegmentArc(S(2, -8, -2, -8), Bump(), new Vec2(0, 2.9)));
+
+    [Fact]
+    public void Arc_RandomBothSolid_TouchesAtTAndNotBefore()
+    {
+        var rng = new Random(19);
+        int hits = 0;
+        static double Dist(Segment s, Arc a)
+        {
+            var d = new List<double>
+            {
+                (s.Start - a.ClosestPoint(s.Start)).Length, (s.End - a.ClosestPoint(s.End)).Length,
+                (a.Start - s.ClosestPoint(a.Start)).Length, (a.End - s.ClosestPoint(a.End)).Length,
+            };
+            foreach (int sign in new[] { 1, -1 })
+            {
+                Vec2 e = a.Center + sign * a.Radius * s.Normal;
+                if (a.IsWithinAngle(e - a.Center)) d.Add((e - s.ClosestPoint(e)).Length);
+            }
+            return d.Min();
+        }
+        Vec2 Rand() => new(rng.NextDouble() * 20, rng.NextDouble() * 20);
+        for (int i = 0; i < 5000; i++)
+        {
+            Segment s = new(Rand(), Rand(), true);
+            double ang = rng.NextDouble() * 2 * Math.PI;
+            double ha = (rng.Next(2) == 0 ? 1 : -1) * (0.2 + rng.NextDouble() * 2.8);
+            var a = new Arc(Rand(), 1 + rng.NextDouble() * 6, new Vec2(Math.Cos(ang), Math.Sin(ang)), ha, true);
+            if ((s.End - s.Start).Length < 0.5) continue;
+            if (Overlap.SegmentArc(s, a) != null || Dist(s, a) < 1e-3) continue;
+            Vec2 v = new(rng.NextDouble() * 30 - 15, rng.NextDouble() * 30 - 15);
+            Hit[]? hs = Collision.SegmentArc(s, a, v);
+            double end = hs?[0].T ?? 1;
+            for (int k = 0; k < 400; k++)
+            {
+                Vec2 off = (end * k / 400) * v;
+                Assert.True(Overlap.SegmentArc(new Segment(s.Start + off, s.End + off), a) == null, $"case {i}: overlaps before T");
+            }
+            if (hs == null) continue;
+            hits++;
+            Vec2 o = end * v;
+            var moved = new Segment(s.Start + o, s.End + o, true);
+            Assert.True(Dist(moved, a) < 1e-7, $"case {i}: not touching at T");
+            foreach (Hit h in hs)
+            {
+                Assert.Equal(end, h.T, 1e-7);
+                Assert.True((h.Point - moved.ClosestPoint(h.Point)).Length < 1e-7 && (h.Point - a.ClosestPoint(h.Point)).Length < 1e-7,
+                    $"case {i}: contact not on both edges");
+                Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
+            }
+        }
+        Assert.True(hits > 200, $"only {hits} hits");
     }
 }
