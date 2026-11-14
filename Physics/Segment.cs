@@ -62,4 +62,9 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     {
         return Vec2.Cross(Start, End)/2;
     }
+    
+    public Vec2 Moment()
+    {
+        return Vec2.Cross(Start, End) * (Start + End) / 6;
+    }
 }

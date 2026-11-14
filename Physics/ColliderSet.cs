@@ -29,6 +29,12 @@ public class ColliderSet
 
     public double Reach {get;}
 
+    private readonly Vec2 moment;
+    public Vec2 Moment => moment;
+
+    private readonly Vec2 center;
+    public Vec2 Center => center;
+
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}
@@ -47,17 +53,29 @@ public class ColliderSet
         Group = group;
         this.edgeLists = (EdgeList[])edgeLists.Clone();
         area = 0;
+        moment = new Vec2();
         foreach (Circle circle in circles)
         {
             double testReach = circle.Center.Length + circle.Radius;
             if (testReach > Reach) {Reach = testReach;}
             area += circle.Radius * circle.Radius;
+            moment += circle.Radius * circle.Radius * circle.Center;
         }
         area *= Math.PI; // Intentionally reducing how many times I multiply by pi
+        moment *= Math.PI;
         foreach (EdgeList edges in edgeLists)
         {
             if (edges.Reach > Reach) {Reach = edges.Reach;}
             area += edges.Area;
+            moment += edges.Moment;
+        }
+        if (area != 0)
+        {
+            center = moment/area;
+        }
+        else
+        {
+            center = new Vec2(0, 0);
         }
     }
 

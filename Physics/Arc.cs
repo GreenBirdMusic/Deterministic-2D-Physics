@@ -129,4 +129,12 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
     {
         return Vec2.Cross(Start, End)/2 + Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2;
     }
+
+    public Vec2 Moment()
+    {
+        double sin = Math.Sin(HalfAngle);
+        return Vec2.Cross(Start, End) * (Start + End) / 6 + Center * 
+        Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2 + Direction * 2/3 *
+        Radius * Radius * Radius * sin * sin * sin;
+    }
 }

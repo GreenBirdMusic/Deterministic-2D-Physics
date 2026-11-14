@@ -20,6 +20,9 @@ public class EdgeList
     private readonly double area;
     public double Area => area;
 
+    private readonly Vec2 moment;
+    public Vec2 Moment => moment;
+
     public EdgeList(IEdge[] edges, bool closed, ulong[]? tags = null)
     {
         if (edges.Length == 0) {throw new ArgumentException("Must provide at least one edge");}
@@ -46,6 +49,7 @@ public class EdgeList
         localEdges = (IEdge[])edges.Clone();
         worldEdges = (IEdge[])edges.Clone();
         area = 0;
+        moment = new Vec2(0, 0);
         foreach (IEdge edge in edges)
         {
             double testReach = edge switch
@@ -58,6 +62,8 @@ public class EdgeList
             if (testReach > Reach) {Reach = testReach;}
 
             if (closed) {area += edge.AreaPiece();}
+
+            if (closed) {moment += edge.Moment();}
         }
     }
 

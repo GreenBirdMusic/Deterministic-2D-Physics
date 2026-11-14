@@ -146,4 +146,11 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
     {
         return Vec2.Cross(Start, End)/2 + Vec2.Cross(Control - Start, End - Start)/3;
     }
+
+    public Vec2 Moment()
+    {
+        Vec2 cCenter = (2 * Start + Control + 2 * End) / 5;
+        return Vec2.Cross(Start, End) * (Start + End) / 6 + 
+        Vec2.Cross(Control - Start, End - Start)/3 * cCenter;
+    }
 }

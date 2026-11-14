@@ -13,4 +13,5 @@ public interface IEdge
     IEdge Transformed(Transform t);
 
     double AreaPiece();
+    Vec2 Moment();
 }
