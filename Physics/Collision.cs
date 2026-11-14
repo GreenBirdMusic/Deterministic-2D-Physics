@@ -401,7 +401,7 @@ public static class Collision
         return null;
     }
 
-    private static List<Hit>? bestCollision(List<Hit>? best, Vec2 p, IEdge edge, Vec2 vel, IEdge source, bool flip)
+    private static List<Hit>? BestCollision(List<Hit>? best, Vec2 p, IEdge edge, Vec2 vel, IEdge source, bool flip)
     {
         Hit? h = PointEdge(p, edge, vel);
         if (h == null && (p - edge.ClosestPoint(p)).LengthSquared <= Vec2.Epsilon * Vec2.Epsilon)
@@ -421,21 +421,27 @@ public static class Collision
         if (h != null && (source.IsBothSolid() || Vec2.Dot(h.Value.Normal, source.NormalAt(p)) <= 0))
         {
             if (flip) {h = new Hit(h.Value.T, p, -h.Value.Normal);}
-            if (best != null && Math.Abs(h.Value.T - best[0].T) < Vec2.Epsilon)
+            return AddHit(best, h.Value);
+        }
+        return best;
+    }
+
+    private static List<Hit>? AddHit(List<Hit>? best, Hit h)
+    {
+        if (best != null && Math.Abs(h.T - best[0].T) < Vec2.Epsilon)
+        {
+            foreach (Hit hit in best)
             {
-                foreach (Hit hit in best)
-                {
-                    if (
-                        (h.Value.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon &&
-                        (hit.Point - h.Value.Point).LengthSquared < Vec2.Epsilon * Vec2.Epsilon
-                    ) {return best;}
-                }
-                best.Add(new Hit(h.Value.T, h.Value.Point, h.Value.Normal));
+                if (
+                    (h.Normal - hit.Normal).LengthSquared < Vec2.Epsilon * Vec2.Epsilon &&
+                    (hit.Point - h.Point).LengthSquared < Vec2.Epsilon * Vec2.Epsilon
+                ) {return best;}
             }
-            else if (best == null || h.Value.T < best[0].T)
-            {
-                best = [new Hit(h.Value.T, h.Value.Point, h.Value.Normal)];
-            }
+            best.Add(new Hit(h.T, h.Point, h.Normal));
+        }
+        else if (best == null || h.T < best[0].T)
+        {
+            best = [new Hit(h.T, h.Point, h.Normal)];
         }
         return best;
     }
@@ -449,10 +455,10 @@ public static class Collision
             (t.End - s.ClosestPoint(t.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon
         ) {return null;}
         List<Hit>? best = null;
-        best = bestCollision(best, s.Start, t, v, s, false);
-        best = bestCollision(best, s.End, t, v, s, false);
-        best = bestCollision(best, t.Start, s, -v, t, true);
-        best = bestCollision(best, t.End, s, -v, t, true);
+        best = BestCollision(best, s.Start, t, v, s, false);
+        best = BestCollision(best, s.End, t, v, s, false);
+        best = BestCollision(best, t.Start, s, -v, t, true);
+        best = BestCollision(best, t.End, s, -v, t, true);
         if (best != null)
         {
             return best.ToArray();
@@ -473,18 +479,108 @@ public static class Collision
             (a.IsWithinAngle(ext2 - a.Center) == false || (ext2 - s.ClosestPoint(ext2)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
         ) {return null;}
         List<Hit>? best = null;
-        best = bestCollision(best, s.Start, a, v, s, false);
-        best = bestCollision(best, s.End, a, v, s, false);
-        best = bestCollision(best, a.Start, s, -v, a, true);
-        best = bestCollision(best, a.End, s, -v, a, true);
+        best = BestCollision(best, s.Start, a, v, s, false);
+        best = BestCollision(best, s.End, a, v, s, false);
+        best = BestCollision(best, a.Start, s, -v, a, true);
+        best = BestCollision(best, a.End, s, -v, a, true);
         if (a.IsWithinAngle(ext1 - a.Center))
         {
-            best = bestCollision(best, ext1, s, -v, a, true);
+            best = BestCollision(best, ext1, s, -v, a, true);
         }
         if (a.IsWithinAngle(ext2 - a.Center))
         {
-            best = bestCollision(best, ext2, s, -v, a, true);
+            best = BestCollision(best, ext2, s, -v, a, true);
         }
+        if (best != null)
+        {
+            return best.ToArray();
+        }
+        return null;
+    }
+
+    public static Hit[]? ArcArc(Arc a, Arc b, Vec2 v)
+    {
+        Vec2 u = (b.Center - a.Center).Normalized();
+        Vec2 ext1 = a.Center + a.Radius * u;
+        Vec2 ext2 = a.Center - a.Radius * u;
+        Vec2 ext3 = b.Center + b.Radius * u;
+        Vec2 ext4 = b.Center - b.Radius * u;
+        if (Overlap.ArcArc(a, b) &&
+            (a.Start - b.ClosestPoint(a.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (a.End - b.ClosestPoint(a.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (b.Start - a.ClosestPoint(b.Start)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (b.End - a.ClosestPoint(b.End)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon &&
+            (a.IsWithinAngle(ext1 - a.Center) == false || (ext1 - b.ClosestPoint(ext1)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon) &&
+            (a.IsWithinAngle(ext2 - a.Center) == false || (ext2 - b.ClosestPoint(ext2)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon) &&
+            (b.IsWithinAngle(ext3 - b.Center) == false || (ext3 - a.ClosestPoint(ext3)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon) &&
+            (b.IsWithinAngle(ext4 - b.Center) == false || (ext4 - a.ClosestPoint(ext4)).LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
+        ) {return null;}
+        List<Hit>? best = null;
+        best = BestCollision(best, a.Start, b, v, a, false);
+        best = BestCollision(best, a.End, b, v, a, false);
+        best = BestCollision(best, b.Start, a, -v, b, true);
+        best = BestCollision(best, b.End, a, -v, b, true);
+        
+        double A = v.LengthSquared; // Dot(v, v) = v^2
+
+        if (A > Vec2.Epsilon * Vec2.Epsilon)
+        {
+            Vec2 f = a.Center - b.Center;
+            double B = Vec2.Dot(f, v);
+
+            void handleT(double t, int sP, int sN)
+            {
+                if (0 <= t && t <= 1)
+                {
+                    Vec2 ca = a.Center + t * v;
+                    Vec2 cu = (ca - b.Center).Normalized();
+                    Vec2 P = b.Center + sP * b.Radius * cu;
+                    Vec2 n = sN * cu;
+                    if (Vec2.Dot(v, n) < 0 &&
+                        b.IsWithinAngle(P - b.Center) &&
+                        a.IsWithinAngle(P - ca) &&
+                        (b.BothSolid || Vec2.Dot(n, b.NormalAt(P)) >= 0) &&
+                        (a.BothSolid || Vec2.Dot(-n, new Arc(ca, a.Radius, a.Direction, a.HalfAngle).NormalAt(P)) >= 0)
+                    )
+                    {
+                        best = AddHit(best, new Hit(t, P, n));
+                    }
+                }
+            }
+            void Tangent(double R, int sP, int sN)
+            {
+                if (Math.Abs(f.Length - R) <= Vec2.Epsilon) {
+                    handleT(0, sP, sN);
+                }
+                double C = f.LengthSquared - R * R;
+                double disc = B * B - A * C;
+                if (disc >= 0)
+                {
+                    double t1 = (-B - Math.Sqrt(disc)) / A;
+                    double t2 = (-B + Math.Sqrt(disc)) / A;
+                    
+                    handleT(t1, sP, sN);
+                    handleT(t2, sP, sN);
+                }
+            }
+
+            Tangent(a.Radius + b.Radius, 1, 1);
+
+            double R = Math.Abs(a.Radius - b.Radius);
+            if (R > Vec2.Epsilon)
+            {
+                if (b.Radius > a.Radius)
+                {
+                    Tangent(R, 1, -1);
+                }
+                else
+                {
+                    // Note that we must have a.Radius > b.Radius
+                    Tangent(R, -1, -1);
+                }
+            }
+        }
+
         if (best != null)
         {
             return best.ToArray();

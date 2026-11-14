@@ -1,4 +1,4 @@
-// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment, SegmentArc), written by Claude. Dev-only, never part of the game.
+// AI-GEN AI-013: tests for Christopher's moving edge-vs-edge checks (Collision.SegmentSegment, SegmentArc, ArcArc), written by Claude. Dev-only, never part of the game.
 using Physics;
 
 namespace PhysicsTests;
@@ -272,6 +272,151 @@ public class EdgeCollisionTests
                 Assert.Equal(end, h.T, 1e-7);
                 Assert.True((h.Point - moved.ClosestPoint(h.Point)).Length < 1e-7 && (h.Point - a.ClosestPoint(h.Point)).Length < 1e-7,
                     $"case {i}: contact not on both edges");
+                Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
+            }
+        }
+        Assert.True(hits > 200, $"only {hits} hits");
+    }
+    // ---- ArcArc (the first arc moves, the second stays still) ----
+    // Still: Bump (top half at (0, 0), radius 5, solid inside) and Bowl (bottom half, open inside).
+    // Movers: "Drop" is a downward bulge (bottom half, solid inside), like a rounded object's underside.
+
+    static Arc Drop(double x, double y, double r) => new(new Vec2(x, y), r, Down, Math.PI / 2);
+    static Arc UpBulge(double x, double y, double r) => new(new Vec2(x, y), r, Up, Math.PI / 2);
+    static Arc Cup(double x, double y, double r) => new(new Vec2(x, y), r, Down, -Math.PI / 2);  // open inside
+    static Arc BowlBoth() => new(Vec2.Zero, 5, Down, -Math.PI / 2, true);
+
+    [Fact]
+    public void AA_DropOntoBump_HeadOn() =>
+        AssertContacts(0.3, Collision.ArcArc(Drop(0, -10, 2), Bump(), new Vec2(0, 10)), (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void AA_DropOntoBump_OffCenter()
+    {
+        // Centers touch when 7 apart: center at (3, -sqrt(40)).
+        double y = -Math.Sqrt(40);
+        var u = new Vec2(3, y) / 7;
+        AssertContacts((10 + y) / 10, Collision.ArcArc(Drop(3, -10, 2), Bump(), new Vec2(0, 10)), (5 * u, u));
+    }
+
+    [Fact]
+    public void AA_SmallDropIntoBowl_Inside() =>
+        // Small arc inside the bowl's circle: touches its bottom when the centers are 4 apart.
+        AssertContacts(0.4, Collision.ArcArc(Drop(0, 0, 1), Bowl(), new Vec2(0, 10)), (new Vec2(0, 5), Up));
+
+    [Fact]
+    public void AA_CupRisesUnderSmallArc_StillOneInside() =>
+        // A cup (radius 5, open inside) around a small downward bulge at (0, 0): rising, the cup's
+        // bottom meets the bulge's bottom (0, 1). Normal points from the bulge down toward the cup.
+        AssertContacts(0.1, Collision.ArcArc(Cup(0, -3, 5), Drop(0, 0, 1), new Vec2(0, -10)), (new Vec2(0, 1), Down));
+
+    [Fact]
+    public void AA_MovingApart_NoHit() =>
+        Assert.Null(Collision.ArcArc(Drop(0, -10, 2), Bump(), new Vec2(0, -10)));
+
+    [Fact]
+    public void AA_StopsShort_NoHit() =>
+        Assert.Null(Collision.ArcArc(Drop(0, -10, 2), Bump(), new Vec2(0, 2.9)));
+
+    [Fact]
+    public void AA_Grazing_NoHit() =>
+        // Passing sideways at exactly the touching distance: a graze, not a hit.
+        Assert.Null(Collision.ArcArc(Drop(-10, -7, 2), Bump(), new Vec2(20, 0)));
+
+    [Fact]
+    public void AA_IntoOneSidedBowlFromOutside_NoHit() =>
+        // An upward bulge rising under the bowl: the bowl is open inside, solid outside... from below
+        // it reaches the bowl's outside, which is its solid side, so the bowl's filter drops it.
+        Assert.Null(Collision.ArcArc(UpBulge(0, 10, 1), Bowl(), new Vec2(0, -10)));
+
+    [Fact]
+    public void AA_IntoBothSolidBowlFromOutside_Hits() =>
+        AssertContacts(0.4, Collision.ArcArc(UpBulge(0, 10, 1), BowlBoth(), new Vec2(0, -10)), (new Vec2(0, 5), Down));
+
+    [Fact]
+    public void AA_EndsUsedWhenTangentPointIsOffTheArc()
+    {
+        // An upward bulge (radius 2) moving left at y = 1.5, just below the bump's right end (5, 0).
+        // The outside tangent would be at y > 0, off the bump (it's only the top half), so the first
+        // contact is the bump's end, when the bulge's center reaches x = 5 + sqrt(1.75).
+        double x = 5 + Math.Sqrt(1.75);
+        AssertContacts((10 - x) / 10, Collision.ArcArc(UpBulge(10, 1.5, 2), Bump(), new Vec2(-10, 0)),
+            (new Vec2(5, 0), new Vec2(Math.Sqrt(1.75), 1.5) / 2));
+    }
+
+    [Fact]
+    public void AA_Resting_MovingDown_HitAtZero() =>
+        AssertContacts(0, Collision.ArcArc(Drop(0, -7, 2), Bump(), new Vec2(0, 1)), (new Vec2(0, -5), Up));
+
+    [Fact]
+    public void AA_RoundingSunk_MovingDown_HitAtZero()
+    {
+        var hits = Collision.ArcArc(Drop(0, -7 + 1e-10, 2), Bump(), new Vec2(0, 1));
+        Assert.NotNull(hits);
+        Assert.Equal(0, hits[0].T, 1e-9);
+    }
+
+    [Fact]
+    public void AA_RoundingSunk_Slow_HitAtZero()
+    {
+        // Same, but moving very slowly: the tolerance must be about distance, not time.
+        var hits = Collision.ArcArc(Drop(0, -7 + 1e-10, 2), Bump(), new Vec2(0, 1e-6));
+        Assert.NotNull(hits);
+        Assert.Equal(0, hits[0].T, 1e-9);
+    }
+
+    [Fact]
+    public void AA_AlreadyCrossing_NoHit() =>
+        Assert.Null(Collision.ArcArc(Drop(0, -6, 2), Bump(), new Vec2(0, 10)));
+
+    [Fact]
+    public void AA_RandomBothSolid_TouchesAtTAndNotBefore()
+    {
+        var rng = new Random(23);
+        int hits = 0;
+        static double Dist(Arc a, Arc b)
+        {
+            var d = new List<double>
+            {
+                (a.Start - b.ClosestPoint(a.Start)).Length, (a.End - b.ClosestPoint(a.End)).Length,
+                (b.Start - a.ClosestPoint(b.Start)).Length, (b.End - a.ClosestPoint(b.End)).Length,
+            };
+            Vec2 u = (b.Center - a.Center).Normalized();
+            foreach (int sg in new[] { 1, -1 })
+            {
+                Vec2 pa = a.Center + sg * a.Radius * u, pb = b.Center + sg * b.Radius * u;
+                if (a.IsWithinAngle(pa - a.Center)) d.Add((pa - b.ClosestPoint(pa)).Length);
+                if (b.IsWithinAngle(pb - b.Center)) d.Add((pb - a.ClosestPoint(pb)).Length);
+            }
+            return d.Min();
+        }
+        Arc RandArc()
+        {
+            double ang = rng.NextDouble() * 2 * Math.PI;
+            double ha = (rng.Next(2) == 0 ? 1 : -1) * (0.2 + rng.NextDouble() * 2.8);
+            return new Arc(new Vec2(rng.NextDouble() * 20, rng.NextDouble() * 20), 1 + rng.NextDouble() * 6,
+                new Vec2(Math.Cos(ang), Math.Sin(ang)), ha, true);
+        }
+        static Arc Moved(Arc a, Vec2 o) => new(a.Center + o, a.Radius, a.Direction, a.HalfAngle, a.BothSolid);
+        for (int i = 0; i < 5000; i++)
+        {
+            Arc a = RandArc(), b = RandArc();
+            if ((a.Center - b.Center).Length < 0.1) continue;
+            if (Overlap.ArcArc(a, b) || Dist(a, b) < 1e-3) continue;
+            Vec2 v = new(rng.NextDouble() * 30 - 15, rng.NextDouble() * 30 - 15);
+            Hit[]? hs = Collision.ArcArc(a, b, v);
+            double end = hs?[0].T ?? 1;
+            for (int k = 0; k < 400; k++)
+                Assert.False(Overlap.ArcArc(Moved(a, (end * k / 400) * v), b), $"case {i}: overlaps before T");
+            if (hs == null) continue;
+            hits++;
+            Arc m = Moved(a, end * v);
+            Assert.True(Dist(m, b) < 1e-7, $"case {i}: not touching at T");
+            foreach (Hit h in hs)
+            {
+                Assert.Equal(end, h.T, 1e-7);
+                Assert.True((h.Point - m.ClosestPoint(h.Point)).Length < 1e-7 && (h.Point - b.ClosestPoint(h.Point)).Length < 1e-7,
+                    $"case {i}: contact not on both arcs");
                 Assert.True(Vec2.Dot(v, h.Normal) < 0, $"case {i}: normal doesn't face the mover");
             }
         }
