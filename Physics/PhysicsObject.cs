@@ -71,6 +71,10 @@ public class PhysicsObject
         }
     }
 
+    public Vec2? GravityOverride;
+
+    public double GravityScale;
+
     private ColliderSet[]? massSets;
     public ColliderSet[]? MassSets
     {
@@ -91,7 +95,7 @@ public class PhysicsObject
     }
 
 
-    public PhysicsObject(Vec2 position, ColliderSet[] colliders, MovementKind movementType, bool rotatable, Vec2 velocity = default, double angle = 0, double angularVelocity = 0, bool mirrored = false, ColliderSet[]? massSets = null, double? massOverride = null)
+    public PhysicsObject(Vec2 position, ColliderSet[] colliders, MovementKind movementType, bool rotatable, Vec2 velocity = default, double angle = 0, double angularVelocity = 0, bool mirrored = false, ColliderSet[]? massSets = null, double? massOverride = null, double gravityScale = 1, Vec2? gravityOverride = null)
     {
         colliders = (ColliderSet[])colliders.Clone();
         for (int i = 0; i < colliders.Length; i++)
@@ -116,6 +120,8 @@ public class PhysicsObject
         Mirrored = mirrored;
         this.movementType = movementType;
         this.rotatable = rotatable;
+        GravityScale = gravityScale;
+        GravityOverride = gravityOverride;
         MassOverride = massOverride;
     }
 
