@@ -91,7 +91,16 @@ public class PhysicsWorld
     private readonly List<CollisionPair> potentialCollisions = [];
     public IReadOnlyList<CollisionPair> PotentialCollisions => potentialCollisions;
 
+    private readonly List<FCollisionPair> filteredCollisions = [];
+    public IReadOnlyList<FCollisionPair> FilteredCollisions => filteredCollisions;
+
     private AlignedBoundingBox SweepBounds(PhysicsObject obj, ColliderSet collider)
+    {
+        AlignedBoundingBox bounds = collider.RotationalBounds;
+        return AlignedBoundingBox.Union(bounds, bounds + obj.Velocity * tickLength);
+    }
+
+    private AlignedBoundingBox RotateBounds(PhysicsObject obj, ColliderSet collider)
     {
         AlignedBoundingBox bounds = collider.Bounds;
         if (obj.AngularVelocity != 0)
@@ -102,7 +111,7 @@ public class PhysicsWorld
                 obj.Position + r
             );
         }
-        return AlignedBoundingBox.Union(bounds, bounds + obj.Velocity * tickLength);
+        return bounds;
     }
 
     public void Step()
@@ -110,10 +119,16 @@ public class PhysicsWorld
         TickCount++; // Let me know if I should move this to the end
         inStep = true;
 
+        static Vec2 ignoredVelocity(PhysicsObject obj)
+        {
+            return obj.MovementType == MovementKind.Static? Vec2.Zero : obj.Velocity;
+        }
+
         try
         {
             activeSets.Clear();
             potentialCollisions.Clear();
+            filteredCollisions.Clear();
             // Phase 1: update world positions, apply gravity, create swept boxes
             foreach (PhysicsObject obj in objects)
             {
@@ -129,6 +144,7 @@ public class PhysicsWorld
                         if (collider.Active)
                         {
                             activeSets.Add(collider);
+                            collider.RotationalBounds = RotateBounds(obj, collider);
                             collider.SweptBounds = SweepBounds(obj, collider);
                         }
                     }
@@ -141,6 +157,7 @@ public class PhysicsWorld
                         if (collider.Active)
                         {
                             activeSets.Add(collider);
+                            collider.RotationalBounds = collider.Bounds;
                             collider.SweptBounds = collider.Bounds;
                         }
                     }
@@ -167,7 +184,20 @@ public class PhysicsWorld
                 }
             }
 
-            // Phase 4: move all non-static objects that exist
+            // Phase 3: iterate over potential collisions and determine actual collisions
+            foreach (CollisionPair pair in potentialCollisions)
+            {
+                ColliderSet a = pair.A;
+                ColliderSet b = pair.B;
+                if (removeQueue.Contains(a.Owner!) || removeQueue.Contains(b.Owner!)) {continue;}
+                if (AlignedBoundingBox.FindOverlapTime(a.RotationalBounds, b.RotationalBounds, (ignoredVelocity(a.Owner!) - ignoredVelocity(b.Owner!)) * tickLength) is
+                    (double tEnter, double tExit))
+                {
+                    filteredCollisions.Add(new FCollisionPair(a, b, pair.Response, tEnter, tExit));
+                }
+            }
+
+            // Phase 4?: move all non-static objects that exist
             foreach (PhysicsObject obj in objects)
             {
                 if (removeQueue.Contains(obj)) {continue;}

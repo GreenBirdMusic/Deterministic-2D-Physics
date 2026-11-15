@@ -56,6 +56,8 @@ public class ColliderSet
 
     public AlignedBoundingBox Bounds {get; private set;}
 
+    public AlignedBoundingBox RotationalBounds {get; internal set;}
+
     public AlignedBoundingBox SweptBounds {get; internal set;}
 
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null, bool active = true)

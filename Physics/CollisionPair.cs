@@ -6,3 +6,8 @@ public readonly record struct CollisionPair(ColliderSet A, ColliderSet B, Collis
 {
     
 }
+
+public readonly record struct FCollisionPair(ColliderSet A, ColliderSet B, CollisionResponse Response, double TEnter, double TExit)
+{
+    
+}
