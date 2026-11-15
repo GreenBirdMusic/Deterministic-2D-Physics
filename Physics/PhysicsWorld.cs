@@ -44,12 +44,14 @@ public class PhysicsWorld
             addQueue.Enqueue(obj);
             obj.World = this;
             obj.IsRemoved = false;
+            obj.UpdateWorld();
         }
         else
         {
             objects.Add(obj);
             obj.World = this;
             obj.IsRemoved = false;
+            obj.UpdateWorld();
         }
     }
 

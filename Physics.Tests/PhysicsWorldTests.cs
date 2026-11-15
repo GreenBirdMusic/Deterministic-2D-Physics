@@ -335,6 +335,29 @@ public class PhysicsWorldTests
     }
 
     [Fact]
+    public void AddUpdatesWorldShapes()
+    {
+        // Static objects never update in Step, so Add has to place their world shapes.
+        var w = World();
+        var o = new PhysicsObject(new Vec2(5, 3), new[] { Disc(Body) }, MovementKind.Static, false);
+        w.Add(o);
+        AssertNear(new Vec2(5, 3), o.ColliderSets[0].WorldCircles[0].Center);
+    }
+
+    [Fact]
+    public void StepUpdatesWorldShapesBeforeMoving()
+    {
+        // World shapes are where the object starts the step (what the moving checks use).
+        var w = World(10);
+        var o = Obj(velocity: new Vec2(10, 0));
+        w.Add(o);
+        o.Position = new Vec2(2, 0); // moved by hand after Add
+        w.Step();
+        AssertNear(new Vec2(2, 0), o.ColliderSets[0].WorldCircles[0].Center);
+        AssertNear(new Vec2(3, 0.1), o.Position);
+    }
+
+    [Fact]
     public void EmptyWorldSteps()
     {
         var w = World();
