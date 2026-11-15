@@ -94,6 +94,9 @@ public class PhysicsObject
         }
     }
 
+    public PhysicsWorld? World {get; internal set;}
+
+    public bool IsRemoved {get; internal set;}
 
     public PhysicsObject(Vec2 position, ColliderSet[] colliders, MovementKind movementType, bool rotatable, Vec2 velocity = default, double angle = 0, double angularVelocity = 0, bool mirrored = false, ColliderSet[]? massSets = null, double? massOverride = null, double gravityScale = 1, Vec2? gravityOverride = null)
     {
@@ -122,6 +125,7 @@ public class PhysicsObject
         this.rotatable = rotatable;
         GravityScale = gravityScale;
         GravityOverride = gravityOverride;
+        IsRemoved = false;
         MassOverride = massOverride;
     }
 
@@ -162,6 +166,7 @@ public class PhysicsObject
 
         inverseMass = (movementType == MovementKind.Dynamic && mass > 0) ? 1 / mass : 0;
         inverseJ = (movementType == MovementKind.Dynamic && rotatable && rotationalInertia > 0) ? 1 / rotationalInertia : 0;
+        World?.CheckMass(this);
     }
 
     public void UpdateWorld()

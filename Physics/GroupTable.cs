@@ -37,5 +37,15 @@ public class GroupTable
         return collisionData[a.ID, b.ID];
     }
 
+    public bool IsSolid(CollisionGroup group)
+    {
+        for (int i = 0; i < Count; i++)
+        {
+            CollisionResponse response = Get(group, new CollisionGroup(i));
+            if (response == CollisionResponse.Solid || response == CollisionResponse.Soft) {return true;}
+        }
+        return false;
+    }
+
     public int Count => groupNumbers.Count;
 }
