@@ -54,6 +54,8 @@ public class ColliderSet
     private readonly double rotationalInertia;
     public double RotationalInertia => rotationalInertia;
 
+    public AlignedBoundingBox Bounds {get; private set;}
+
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null, bool active = true)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}
@@ -104,13 +106,23 @@ public class ColliderSet
 
     public void UpdateWorld(Transform t)
     {
+        AlignedBoundingBox? bestBounds = null;
         for (int i = 0; i < localCircles.Length; i++)
         {
             worldCircles[i] = localCircles[i].Transformed(t);
+            double r = worldCircles[i].Radius;
+            if (bestBounds == null)
+            {
+                bestBounds = new AlignedBoundingBox(worldCircles[i].Center, worldCircles[i].Center);
+            }
+            bestBounds = bestBounds.Value.CheckPoint(worldCircles[i].Center - new Vec2(r, r));
+            bestBounds = bestBounds.Value.CheckPoint(worldCircles[i].Center + new Vec2(r, r));
         }
         foreach (EdgeList edges in edgeLists)
         {
             edges.UpdateWorld(t);
+            bestBounds = edges.CompareBounds(bestBounds);
         }
+        if (bestBounds != null) {Bounds = bestBounds.Value;}
     }
 }

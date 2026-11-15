@@ -146,4 +146,28 @@ public readonly record struct Arc(Vec2 Center, double Radius, Vec2 Direction, do
         r4 * HalfAngle / 2 - r4 * Math.Sin(2 * HalfAngle) * (2 + Math.Cos(2 * HalfAngle)) / 12 + Radius * Radius * (HalfAngle * 2 - Math.Sin(HalfAngle * 2)) / 2 * Center.LengthSquared + 4 *
         Radius * Radius * Radius * sin * sin * sin * Vec2.Dot(Center, Direction) / 3;
     }
+
+    public AlignedBoundingBox CompareBounds(AlignedBoundingBox? bestBounds)
+    {
+        if (bestBounds == null) {bestBounds = new AlignedBoundingBox(Start, Start);}
+        bestBounds = bestBounds.Value.CheckPoint(Start);
+        bestBounds = bestBounds.Value.CheckPoint(End);
+        if (IsWithinAngle(new Vec2(1, 0)))
+        {
+            bestBounds = bestBounds.Value.CheckPoint(Center + new Vec2(Radius, 0));
+        }
+        if (IsWithinAngle(new Vec2(0, 1)))
+        {
+            bestBounds = bestBounds.Value.CheckPoint(Center + new Vec2(0, Radius));
+        }
+        if (IsWithinAngle(new Vec2(-1, 0)))
+        {
+            bestBounds = bestBounds.Value.CheckPoint(Center - new Vec2(Radius, 0));
+        }
+        if (IsWithinAngle(new Vec2(0, -1)))
+        {
+            bestBounds = bestBounds.Value.CheckPoint(Center - new Vec2(0, Radius));
+        }
+        return bestBounds.Value;
+    }
 }

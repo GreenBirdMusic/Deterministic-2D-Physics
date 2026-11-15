@@ -181,4 +181,22 @@ public readonly record struct Curve(Vec2 Start, Vec2 Control, Vec2 End, bool Bot
         }
         return output/4;
     }
+
+    public AlignedBoundingBox CompareBounds(AlignedBoundingBox? bestBounds)
+    {
+        if (bestBounds == null) {bestBounds = new AlignedBoundingBox(Start, Start);}
+        bestBounds = bestBounds.Value.CheckPoint(Start);
+        bestBounds = bestBounds.Value.CheckPoint(End);
+        double t = (Start.X - Control.X) / Bend.X;
+        if (0 < t && t < 1)
+        {
+            bestBounds = bestBounds.Value.CheckPoint(PointAt(t));
+        }
+        t = (Start.Y - Control.Y) / Bend.Y;
+        if (0 < t && t < 1)
+        {
+            bestBounds = bestBounds.Value.CheckPoint(PointAt(t));
+        }
+        return bestBounds.Value;
+    }
 }

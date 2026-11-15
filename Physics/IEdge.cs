@@ -16,4 +16,6 @@ public interface IEdge
     Vec2 Moment();
 
     double RotationalInertia();
+
+    public AlignedBoundingBox CompareBounds(AlignedBoundingBox? bestBounds);
 }

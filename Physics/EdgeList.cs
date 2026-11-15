@@ -80,4 +80,13 @@ public class EdgeList
             worldEdges[i] = localEdges[i].Transformed(t);
         }
     }
+
+    public AlignedBoundingBox? CompareBounds(AlignedBoundingBox? bestBounds)
+    {
+        for (int i = 0; i < worldEdges.Length; i++)
+        {
+            bestBounds = worldEdges[i].CompareBounds(bestBounds);
+        }
+        return bestBounds;
+    }
 }

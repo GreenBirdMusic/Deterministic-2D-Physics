@@ -72,4 +72,12 @@ public readonly record struct Segment(Vec2 Start, Vec2 End, bool BothSolid = fal
     {
         return Vec2.Cross(Start, End) * (Vec2.Dot(Start, Start) + Vec2.Dot(Start, End) + Vec2.Dot(End, End)) / 12;
     }
+
+    public AlignedBoundingBox CompareBounds(AlignedBoundingBox? bestBounds)
+    {
+        if (bestBounds == null) {bestBounds = new AlignedBoundingBox(Start, Start);}
+        bestBounds = bestBounds.Value.CheckPoint(Start);
+        bestBounds = bestBounds.Value.CheckPoint(End);
+        return bestBounds.Value;
+    }
 }
