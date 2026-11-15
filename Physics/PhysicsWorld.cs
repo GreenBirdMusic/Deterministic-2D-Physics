@@ -95,6 +95,7 @@ public class PhysicsWorld
             {
                 if (removeQueue.Contains(obj)) {continue;}
                 if (obj.MovementType != MovementKind.Static) {
+                    obj.UpdateWorld();
                     if (obj.MovementType == MovementKind.Dynamic)
                     {
                         obj.Velocity += (obj.GravityOverride ?? Gravity) * obj.GravityScale * tickLength;
