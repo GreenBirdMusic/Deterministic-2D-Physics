@@ -86,6 +86,25 @@ public class PhysicsWorld
         }
     }
 
+    private readonly List<ColliderSet> activeSets = [];
+    public IReadOnlyList<ColliderSet> ActiveSets => activeSets;
+    private readonly List<CollisionPair> potentialCollisions = [];
+    public IReadOnlyList<CollisionPair> PotentialCollisions => potentialCollisions;
+
+    private AlignedBoundingBox SweepBounds(PhysicsObject obj, ColliderSet collider)
+    {
+        AlignedBoundingBox bounds = collider.Bounds;
+        if (obj.AngularVelocity != 0)
+        {
+            Vec2 r = new Vec2(collider.Reach, collider.Reach);
+            bounds = new AlignedBoundingBox(
+                obj.Position - r,
+                obj.Position + r
+            );
+        }
+        return AlignedBoundingBox.Union(bounds, bounds + obj.Velocity * tickLength);
+    }
+
     public void Step()
     {
         TickCount++; // Let me know if I should move this to the end
@@ -93,6 +112,9 @@ public class PhysicsWorld
 
         try
         {
+            activeSets.Clear();
+            potentialCollisions.Clear();
+            // Phase 1: update world positions, apply gravity, create swept boxes
             foreach (PhysicsObject obj in objects)
             {
                 if (removeQueue.Contains(obj)) {continue;}
@@ -102,7 +124,54 @@ public class PhysicsWorld
                     {
                         obj.Velocity += (obj.GravityOverride ?? Gravity) * obj.GravityScale * tickLength;
                     }
-                    // Note: would use the solver here to account for collision later
+                    foreach (ColliderSet collider in obj.ColliderSets)
+                    {
+                        if (collider.Active)
+                        {
+                            activeSets.Add(collider);
+                            collider.SweptBounds = SweepBounds(obj, collider);
+                        }
+                    }
+                }
+                else
+                {
+                    // static
+                    foreach (ColliderSet collider in obj.ColliderSets)
+                    {
+                        if (collider.Active)
+                        {
+                            activeSets.Add(collider);
+                            collider.SweptBounds = collider.Bounds;
+                        }
+                    }
+                }
+            }
+
+            // Phase 2: iterate over active colliders and check for overlapping broad boxes
+            for (int i = 0; i < activeSets.Count - 1; i++)
+            {
+                ColliderSet a = activeSets[i];
+                if (removeQueue.Contains(a.Owner!)) {continue;}
+                for (int j = i + 1; j < activeSets.Count; j++)
+                {
+                    ColliderSet b = activeSets[j];
+                    if (removeQueue.Contains(b.Owner!)) {continue;}
+                    if (a.Owner == b.Owner) {continue;}
+                    if (a.Owner!.MovementType == MovementKind.Static && b.Owner!.MovementType == MovementKind.Static) {continue;}
+                    CollisionResponse response = CollisionGroups.Get(a.Group, b.Group);
+                    if (response == CollisionResponse.Ignore) {continue;}
+                    if (AlignedBoundingBox.BoxesOverlap(a.SweptBounds, b.SweptBounds))
+                    {
+                        potentialCollisions.Add(new CollisionPair(a, b, response));
+                    }
+                }
+            }
+
+            // Phase 4: move all non-static objects that exist
+            foreach (PhysicsObject obj in objects)
+            {
+                if (removeQueue.Contains(obj)) {continue;}
+                if (obj.MovementType != MovementKind.Static) {
                     obj.Position += obj.Velocity * tickLength;
                     obj.Angle += obj.AngularVelocity * tickLength;
                 }

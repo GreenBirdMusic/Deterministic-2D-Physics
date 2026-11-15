@@ -56,6 +56,8 @@ public class ColliderSet
 
     public AlignedBoundingBox Bounds {get; private set;}
 
+    public AlignedBoundingBox SweptBounds {get; internal set;}
+
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null, bool active = true)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}

@@ -32,4 +32,25 @@ public readonly record struct AlignedBoundingBox(Vec2 Min, Vec2 Max)
             )
         );
     }
+
+    public static AlignedBoundingBox Union (AlignedBoundingBox left, AlignedBoundingBox right)
+    {
+        left = left.CheckPoint(right.Min);
+        return left.CheckPoint(right.Max);
+    }
+
+    public static AlignedBoundingBox operator +(AlignedBoundingBox box, Vec2 p)
+    {
+        return new AlignedBoundingBox(box.Min + p, box.Max + p);
+    }
+
+    public static AlignedBoundingBox operator +(Vec2 p, AlignedBoundingBox box)
+    {
+        return new AlignedBoundingBox(box.Min + p, box.Max + p);
+    }
+
+    public static AlignedBoundingBox operator -(AlignedBoundingBox box, Vec2 p)
+    {
+        return new AlignedBoundingBox(box.Min - p, box.Max - p);
+    }
 }
