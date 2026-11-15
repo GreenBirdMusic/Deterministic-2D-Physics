@@ -13,6 +13,7 @@ public class ColliderSet
         {
             if (value < 0) {throw new ArgumentException("Density must be nonnegative");}
             density = value;
+            if (Owner != null) {Owner.RecalculateMass();}
         }
     }
     public CollisionGroup Group;
@@ -23,6 +24,21 @@ public class ColliderSet
     public ulong[] CircleTags;
     private readonly EdgeList[] edgeLists;
     public IReadOnlyList<EdgeList> EdgeLists => edgeLists;
+
+    internal PhysicsObject? Owner = null;
+
+    internal bool active;
+    public bool Active
+    {
+        get => active;
+        set
+        {
+            if (value == active) return;
+            Owner?.CheckActivation(this, value);
+            active = value;
+            Owner?.OnSetChanged(this);
+        }
+    }
 
     private readonly double area;
     public double Area => area;
@@ -38,7 +54,7 @@ public class ColliderSet
     private readonly double rotationalInertia;
     public double RotationalInertia => rotationalInertia;
 
-    public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null)
+    public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null, bool active = true)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}
         Density = density;
@@ -53,6 +69,7 @@ public class ColliderSet
         CircleTags = (ulong[])circleTags.Clone();
         localCircles = (Circle[])circles.Clone();
         worldCircles = (Circle[])circles.Clone();
+        Active = active;
         Group = group;
         this.edgeLists = (EdgeList[])edgeLists.Clone();
         area = 0;
