@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Physics;
 
@@ -94,6 +95,9 @@ public class PhysicsWorld
     private readonly List<FCollisionPair> filteredCollisions = [];
     public IReadOnlyList<FCollisionPair> FilteredCollisions => filteredCollisions;
 
+    private readonly List<ECollisionPair> exactCollisions = [];
+    public IReadOnlyList<ECollisionPair> ExactCollisions => exactCollisions;
+
     private AlignedBoundingBox SweepBounds(PhysicsObject obj, ColliderSet collider)
     {
         AlignedBoundingBox bounds = collider.RotationalBounds;
@@ -129,6 +133,7 @@ public class PhysicsWorld
             activeSets.Clear();
             potentialCollisions.Clear();
             filteredCollisions.Clear();
+            exactCollisions.Clear();
             // Phase 1: update world positions, apply gravity, create swept boxes
             foreach (PhysicsObject obj in objects)
             {
@@ -184,7 +189,7 @@ public class PhysicsWorld
                 }
             }
 
-            // Phase 3: iterate over potential collisions and determine actual collisions
+            // Phase 3: iterate over potential collisions and determine filtered collisions
             foreach (CollisionPair pair in potentialCollisions)
             {
                 ColliderSet a = pair.A;
@@ -197,7 +202,87 @@ public class PhysicsWorld
                 }
             }
 
-            // Phase 4?: move all non-static objects that exist
+            static List<Hit> calcHits(List<Hit> bestHits, Hit[] potentialHits)
+            {
+                if (bestHits.Count == 0) {bestHits = potentialHits.ToList();}
+                else if (Math.Abs(potentialHits[0].T - bestHits[0].T) < Vec2.Epsilon)
+                {
+                    foreach (Hit hit in potentialHits)
+                    {
+                        bestHits.Add(hit);
+                    }
+                }
+                else if (potentialHits[0].T < bestHits[0].T)
+                {
+                    bestHits = potentialHits.ToList();
+                }
+                return bestHits;
+            }
+
+            // Phase 4: iterate over filtered collisions and determine actual collisions
+            foreach (FCollisionPair pair in filteredCollisions)
+            {
+                ColliderSet a = pair.A;
+                ColliderSet b = pair.B;
+                if (removeQueue.Contains(a.Owner!) || removeQueue.Contains(b.Owner!)) {continue;}
+                Vec2 velA = ignoredVelocity(a.Owner!) * tickLength;
+                Vec2 velB = ignoredVelocity(b.Owner!) * tickLength;
+                if (true) // Placeholder true, once the solver works for rotation use the statement to the right //((a.Owner!.AngularVelocity == 0 || a.IsCircle) && (b.Owner!.AngularVelocity == 0 || b.IsCircle))
+                {
+                    double bestT = pair.TExit; // Automatically ignores t values that are too late
+                    List<Hit> bestHits = [];
+                    foreach (Circle ca in a.WorldCircles)
+                    {
+                        foreach (Circle cb in b.WorldCircles)
+                        {
+                            Hit[]? potentialHits = Collision.CircleCircle(ca, cb, velA, velB);
+                            if (potentialHits != null)
+                            {
+                                bestHits = calcHits(bestHits, potentialHits);
+                                if (bestHits.Count > 0) {bestT = bestHits[0].T;}
+                            }
+                        }
+                        foreach (EdgeList edgesB in b.EdgeLists)
+                        {
+                            Hit[]? potentialHits = Collision.CircleLoop(ca, edgesB.WorldEdges, velA, velB);
+                            if (potentialHits != null)
+                            {
+                                bestHits = calcHits(bestHits, potentialHits);
+                                if (bestHits.Count > 0) {bestT = bestHits[0].T;}
+                            }
+                        }
+                    }
+                    foreach (EdgeList edgesA in a.EdgeLists)
+                    {
+                        foreach (Circle cb in b.WorldCircles)
+                        {
+                            Hit[]? potentialHits = Collision.CircleLoop(cb, edgesA.WorldEdges, velB, velA);
+                            if (potentialHits != null)
+                            {
+                                for (int i = 0; i < potentialHits.Length; i++) {potentialHits[i] = potentialHits[i] with {Normal = -potentialHits[i].Normal};}
+                                bestHits = calcHits(bestHits, potentialHits);
+                                if (bestHits.Count > 0) {bestT = bestHits[0].T;}
+                            }
+                        }
+                        foreach (EdgeList edgesB in b.EdgeLists)
+                        {
+                            Hit[]? potentialHits = Collision.LoopLoop(edgesA.WorldEdges, edgesB.WorldEdges, velA, velB);
+                            if (potentialHits != null)
+                            {
+                                bestHits = calcHits(bestHits, potentialHits);
+                                if (bestHits.Count > 0) {bestT = bestHits[0].T;}
+                            }
+                        }
+                    }
+                    if (bestT >= pair.TEnter && bestHits.Count > 0)
+                    {
+                        // There is a collision
+                        exactCollisions.Add(new ECollisionPair(a, b, pair.Response, bestT, bestHits.ToArray()));
+                    }
+                }
+            }
+
+            // Last Phase (give number once all the rest are done): move all non-static objects that exist
             foreach (PhysicsObject obj in objects)
             {
                 if (removeQueue.Contains(obj)) {continue;}

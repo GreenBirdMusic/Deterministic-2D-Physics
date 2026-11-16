@@ -60,6 +60,8 @@ public class ColliderSet
 
     public AlignedBoundingBox SweptBounds {get; internal set;}
 
+    public bool IsCircle {get;}
+
     public ColliderSet(CollisionGroup group, double density, Circle[] circles, EdgeList[] edgeLists, ulong[]? circleTags = null, bool active = true)
     {
         if (edgeLists.Length + circles.Length == 0) {throw new ArgumentException("Must provide at least one collider");}
@@ -105,6 +107,17 @@ public class ColliderSet
         else
         {
             center = new Vec2(0, 0);
+        }
+        if (edgeLists.Length == 0)
+        {
+            IsCircle = true;
+            foreach (Circle c in circles)
+            {
+                if (c.Center.LengthSquared > Vec2.Epsilon * Vec2.Epsilon)
+                {
+                    IsCircle = false;
+                }
+            }
         }
     }
 

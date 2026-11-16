@@ -11,3 +11,8 @@ public readonly record struct FCollisionPair(ColliderSet A, ColliderSet B, Colli
 {
     
 }
+
+public readonly record struct ECollisionPair(ColliderSet A, ColliderSet B, CollisionResponse Response, double T, Hit[] Hits)
+{
+    
+}
